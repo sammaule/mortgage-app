@@ -26,8 +26,22 @@ app.layout = html.Div([
         dcc.Input(id='mortgage-size', value=200, type='number'),
     ]),
     html.Div([
-        "Mortgage term: ",
+        "Purchase price (£k)",
+        dcc.Input(id='purchase-price', value=350, type='number'),
+    ]),
+    html.Div(id="ltv"
+             ),
+    html.Div([
+        "Offer term (years): ",
+        dcc.Input(id='offer-term', value=2, type='number'),
+    ]),
+    html.Div([
+        "Mortgage term (years): ",
         dcc.Input(id='mortgage-term', value=20, type='number'),
+    ]),
+    html.Div([
+        "Initial interest rate (%): ",
+        dcc.Input(id='initial-interest-rate', value=1.0, type='number'),
     ]),
     html.Div([
         "Interest rate (%): ",
@@ -39,18 +53,46 @@ app.layout = html.Div([
 
 
 @app.callback(
+    Output('ltv', 'children'),
+    [Input('mortgage-size', 'value'),
+     Input('purchase-price', 'value')]
+)
+def calc_ltv(mortgage, price):
+    ltv = round(mortgage * 100 / price, 1)
+    return f"LTV: {ltv}%"
+
+
+@app.callback(
     [Output('mortgage-plot', 'figure'),
      Output('total-repaid', 'children')
      ],
     [Input('mortgage-size', 'value'),
      Input('mortgage-term', 'value'),
-     Input('interest-rate', 'value')]
+     Input('interest-rate', 'value'),
+     Input('offer-term', 'value'),
+     Input('initial-interest-rate', 'value'),
+     ]
 )
-def plot_monthly_repayments(total, term, interest_rate):
+def plot_monthly_repayments(total, term, interest_rate, offer_term, offer_rate):
+
+    # Compute initial monthly payment
+    total_borrowed = total * 1000
+    n_payments = term * 12
+    offer_months = offer_term * 12
+    offer_r = (offer_rate / 12) / 100
+    offer_m_payment = (total_borrowed * offer_r) / (1 - (1 + offer_r)**-n_payments)
+    initial_payments = np.array([offer_m_payment] * offer_months)
+    # TODO: Calculate cumulative interest and principal outstanding at end of offer to compute
+    #  remaining monthly repayments.
+    # Calculate cumulative interest and principal paid at end of offer period
+    first = ((total_borrowed * offer_r) - offer_m_payment)
+    last = (offer_m_payment * offer_months)
+    num = (1 + offer_m_payment)**offer_months - 1
+    c_interest = first * num / offer_r + last
 
     # Compute monthly payment according to formula here:
     # https://en.wikipedia.org/wiki/Mortgage_calculator
-    total_borrowed = total * 1000
+
     n_payments = term * 12
     monthly_r = (interest_rate / 12) / 100
     monthly_payment = (total_borrowed * monthly_r) / (1 - (1 + monthly_r)**-n_payments)
