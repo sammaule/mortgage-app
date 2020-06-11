@@ -74,6 +74,8 @@ def calc_ltv(mortgage, price):
      ]
 )
 def plot_monthly_repayments(total, term, interest_rate, offer_term, offer_rate):
+    # TODO: write helper functions to simplify this callback one for computing monthly payments
+    # One for computing remaining balance
 
     # Compute initial monthly payment
     total_borrowed = total * 1000
@@ -82,24 +84,22 @@ def plot_monthly_repayments(total, term, interest_rate, offer_term, offer_rate):
     offer_r = (offer_rate / 12) / 100
     offer_m_payment = (total_borrowed * offer_r) / (1 - (1 + offer_r)**-n_payments)
     initial_payments = np.array([offer_m_payment] * offer_months)
-    # TODO: Calculate cumulative interest and principal outstanding at end of offer to compute
-    #  remaining monthly repayments.
-    # Calculate cumulative interest and principal paid at end of offer period
-    first = ((total_borrowed * offer_r) - offer_m_payment)
-    last = (offer_m_payment * offer_months)
-    num = (1 + offer_m_payment)**offer_months - 1
-    c_interest = first * num / offer_r + last
+
+    # remaining balance on loan
+    # Formula from https://www.mtgprofessor.com/formulas.htm
+    balance = total_borrowed * ((1 + offer_r)**n_payments - (1 + offer_r)**offer_months) / ((1 + offer_r)**n_payments - 1)
 
     # Compute monthly payment according to formula here:
     # https://en.wikipedia.org/wiki/Mortgage_calculator
 
-    n_payments = term * 12
+    n_payments = (term - offer_term) * 12
     monthly_r = (interest_rate / 12) / 100
-    monthly_payment = (total_borrowed * monthly_r) / (1 - (1 + monthly_r)**-n_payments)
+    monthly_payment = (balance * monthly_r) / (1 - (1 + monthly_r)**-n_payments)
+    later_payments = np.array([monthly_payment] * n_payments)
 
     # Generate plot data
     x = np.array(range(1, n_payments + 1))
-    y = np.array([monthly_payment] * n_payments)
+    y = np.append(initial_payments, later_payments)
 
     # Create figure dict
     figure = {
