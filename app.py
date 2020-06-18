@@ -16,7 +16,6 @@ styles = {"pre": {"border": "thin lightgrey solid", "overflowX": "scroll"}}
 
 app.layout = html.Div(
     [
-        dcc.Graph(id="mortgage-plot",),
         # TODO: Align the input boxes
         html.Div(
             [
@@ -30,17 +29,30 @@ app.layout = html.Div(
                 dcc.Input(id="purchase-price", value=375, type="number"),
             ]
         ),
-        html.Div(id="ltv"),
         html.Div(
             [
                 "Offer term (years): ",
-                dcc.Input(id="offer-term", value=2, type="number", min=0),
+                dcc.Slider(
+                    id="offer-term",
+                    value=3,
+                    marks={i: f"{i}" for i in range(0, 6)},
+                    step=1,
+                    min=0,
+                    max=5,
+                ),
             ]
         ),
         html.Div(
             [
                 "Mortgage term (years): ",
-                dcc.Input(id="mortgage-term", value=20, type="number", min=1),
+                dcc.Slider(
+                    id="mortgage-term",
+                    value=20,
+                    marks={i: f"{i}" for i in range(5, 41, 5)},
+                    step=1,
+                    min=5,
+                    max=40,
+                ),
             ]
         ),
         html.Div(
@@ -64,6 +76,10 @@ app.layout = html.Div(
             ]
         ),
         html.Div(id="total-repaid"),
+        html.Div(id="ltv"),
+        html.Div(id="monthly-payment-offer"),
+        html.Div(id="monthly-payment"),
+        dcc.Graph(id="mortgage-plot",),
     ]
 )
 
@@ -88,7 +104,12 @@ def calc_ltv(deposit: int, price: int) -> str:
 
 
 @app.callback(
-    [Output("mortgage-plot", "figure"), Output("total-repaid", "children")],
+    [
+        Output("mortgage-plot", "figure"),
+        Output("total-repaid", "children"),
+        Output("monthly-payment-offer", "children"),
+        Output("monthly-payment", "children"),
+    ],
     [
         Input("deposit-size", "value"),
         Input("purchase-price", "value"),
@@ -105,7 +126,7 @@ def plot_monthly_repayments(
     interest_rate: float,
     offer_term: int,
     offer_rate: float,
-) -> Tuple[dict, str]:
+) -> Tuple[dict, str, str, str]:
     """
     Callback to plot the payment schedule and populate the total interest repaid.
 
@@ -137,8 +158,8 @@ def plot_monthly_repayments(
 
         # Compute monthly payment according to formula here:
         remaining_term = term - offer_term
-        m_payments = calc_monthly_payment(balance, interest_rate, remaining_term)
-        later_payments = np.array([m_payments] * remaining_term * 12)
+        m_payment = calc_monthly_payment(balance, interest_rate, remaining_term)
+        later_payments = np.array([m_payment] * remaining_term * 12)
 
         # Generate plot data
         x = np.array(range(1, term * 12 + 1))
@@ -154,14 +175,19 @@ def plot_monthly_repayments(
                 "clickmode": "event+select",
             },
         }
+        # Create strings for output
         interest_paid = int(np.sum(y) - total_borrowed)
         interest_paid = f"Total interest paid: £{interest_paid:,}"
-        return figure, interest_paid
+        offer_m_payment = f"Initial offer monthly payment: £{offer_m_payment :,.2f}"
+        m_payment = f"Regular monthly payment: £{m_payment :,.2f}"
+        return figure, interest_paid, offer_m_payment, m_payment
     else:
         raise PreventUpdate
 
 
-def calc_monthly_payment(total_borrowed: Union[int, float], r: float, term: int) -> float:
+def calc_monthly_payment(
+    total_borrowed: Union[int, float], r: float, term: int
+) -> float:
     """
     Function to compute monthly mortgage repayments.
     https://en.wikipedia.org/wiki/Mortgage_calculator
@@ -209,21 +235,21 @@ def compute_remaining_balance(
     )
 
 
-@app.callback(Output("offer-term", "max"), [Input("mortgage-term", "value")])
-def limit_offer_term(mortgage_term: int) -> int:
-    """
-    Callback to ensure offer term is shorter than mortgage term
-
-    Args:
-        mortgage_term (): int mortgage term (years)
-
-    Returns:
-        Output('offer-term', 'max') : int max value for offer term
-    """
-    if mortgage_term is not None:
-        return mortgage_term - 1
-    else:
-        raise PreventUpdate
+# @app.callback(Output("offer-term", "max"), [Input("mortgage-term", "value")])
+# def limit_offer_term(mortgage_term: int) -> int:
+#     """
+#     Callback to ensure offer term is shorter than mortgage term
+#
+#     Args:
+#         mortgage_term (): int mortgage term (years)
+#
+#     Returns:
+#         Output('offer-term', 'max') : int max value for offer term
+#     """
+#     if mortgage_term is not None:
+#         return mortgage_term - 1
+#     else:
+#         raise PreventUpdate
 
 
 if __name__ == "__main__":
