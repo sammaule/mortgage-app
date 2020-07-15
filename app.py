@@ -65,7 +65,7 @@ first_card = dbc.Card(
                             type="number",
                             min=0,
                             max=100,
-                            step=0.01
+                            step=0.01,
                         ),
                     ]
                 ),
@@ -78,7 +78,7 @@ first_card = dbc.Card(
                             type="number",
                             min=0,
                             max=100,
-                            step=0.01
+                            step=0.01,
                         ),
                     ]
                 ),
@@ -93,10 +93,19 @@ second_card = dbc.Card(
         dbc.CardBody(
             [
                 html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-size")]),
-                html.Div([dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]),
+                html.Div(
+                    [dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]
+                ),
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
-                html.Div([dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer")]),
-                html.Div([dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]),
+                html.Div(
+                    [
+                        dbc.Label("Monthly payment (offer period):"),
+                        html.H5(id="monthly-payment-offer"),
+                    ]
+                ),
+                html.Div(
+                    [dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]
+                ),
             ]
         ),
     ]
@@ -111,8 +120,7 @@ app.layout = html.Div(
 
 
 @app.callback(
-    [Output("ltv", "children"),
-     Output("mortgage-size", "children")],
+    [Output("ltv", "children"), Output("mortgage-size", "children")],
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
 )
 def calc_ltv(deposit: int, price: int) -> str:
