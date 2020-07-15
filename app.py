@@ -2,85 +2,108 @@
 from typing import Tuple, Dict, Union
 
 import dash
+import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import numpy as np
 from dash.exceptions import PreventUpdate
 
-external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(external_stylesheets=[dbc.themes.FLATLY])
 
 styles = {"pre": {"border": "thin lightgrey solid", "overflowX": "scroll"}}
 
+first_card = dbc.Card(
+    [
+        dbc.CardHeader("Input details"),
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        "Deposit size (£k)",
+                        dcc.Input(id="deposit-size", value=150, type="number"),
+                    ]
+                ),
+                html.Div(
+                    [
+                        "Purchase price (£k)",
+                        dcc.Input(id="purchase-price", value=375, type="number"),
+                    ]
+                ),
+                html.Div(
+                    [
+                        "Offer term (years): ",
+                        dcc.Slider(
+                            id="offer-term",
+                            value=3,
+                            marks={i: f"{i}" for i in range(0, 6)},
+                            step=1,
+                            min=0,
+                            max=5,
+                        ),
+                    ]
+                ),
+                html.Div(
+                    [
+                        "Mortgage term (years): ",
+                        dcc.Slider(
+                            id="mortgage-term",
+                            value=20,
+                            marks={i: f"{i}" for i in range(5, 41, 5)},
+                            step=1,
+                            min=5,
+                            max=40,
+                        ),
+                    ]
+                ),
+                html.Div(
+                    [
+                        "Initial interest rate (%): ",
+                        dcc.Input(
+                            id="initial-interest-rate",
+                            value=1.05,
+                            type="number",
+                            min=0.01,
+                            max=100,
+                        ),
+                    ]
+                ),
+                html.Div(
+                    [
+                        "Interest rate (%): ",
+                        dcc.Input(
+                            id="interest-rate",
+                            value=3.0,
+                            type="number",
+                            min=0.01,
+                            max=100,
+                        ),
+                    ]
+                ),
+            ]
+        ),
+    ],
+)
+
+second_card = dbc.Card(
+    [
+        dbc.CardHeader("Output"),
+        dbc.CardBody(
+            [
+                html.Div(id="total-repaid"),
+                html.Div(id="ltv"),
+                html.Div(id="monthly-payment-offer"),
+                html.Div(id="monthly-payment"),
+            ]
+        ),
+    ]
+)
+
 app.layout = html.Div(
     [
-        # TODO: Align the input boxes
-        html.Div(
-            [
-                "Deposit size (£k)",
-                dcc.Input(id="deposit-size", value=150, type="number"),
-            ]
-        ),
-        html.Div(
-            [
-                "Purchase price (£k)",
-                dcc.Input(id="purchase-price", value=375, type="number"),
-            ]
-        ),
-        html.Div(
-            [
-                "Offer term (years): ",
-                dcc.Slider(
-                    id="offer-term",
-                    value=3,
-                    marks={i: f"{i}" for i in range(0, 6)},
-                    step=1,
-                    min=0,
-                    max=5,
-                ),
-            ]
-        ),
-        html.Div(
-            [
-                "Mortgage term (years): ",
-                dcc.Slider(
-                    id="mortgage-term",
-                    value=20,
-                    marks={i: f"{i}" for i in range(5, 41, 5)},
-                    step=1,
-                    min=5,
-                    max=40,
-                ),
-            ]
-        ),
-        html.Div(
-            [
-                "Initial interest rate (%): ",
-                dcc.Input(
-                    id="initial-interest-rate",
-                    value=1.05,
-                    type="number",
-                    min=0.01,
-                    max=100,
-                ),
-            ]
-        ),
-        html.Div(
-            [
-                "Interest rate (%): ",
-                dcc.Input(
-                    id="interest-rate", value=3.0, type="number", min=0.01, max=100
-                ),
-            ]
-        ),
-        html.Div(id="total-repaid"),
-        html.Div(id="ltv"),
-        html.Div(id="monthly-payment-offer"),
-        html.Div(id="monthly-payment"),
-        dcc.Graph(id="mortgage-plot",),
-    ]
+        dbc.Row([dbc.Col(first_card, width=6), dbc.Col(second_card, width=6)]),
+        dbc.Row([dbc.Col(dcc.Graph(id="mortgage-plot"), width=12)]),
+    ],
 )
 
 
@@ -233,23 +256,6 @@ def compute_remaining_balance(
         * ((1 + offer_r) ** n_payments - (1 + offer_r) ** offer_months)
         / ((1 + offer_r) ** n_payments - 1)
     )
-
-
-# @app.callback(Output("offer-term", "max"), [Input("mortgage-term", "value")])
-# def limit_offer_term(mortgage_term: int) -> int:
-#     """
-#     Callback to ensure offer term is shorter than mortgage term
-#
-#     Args:
-#         mortgage_term (): int mortgage term (years)
-#
-#     Returns:
-#         Output('offer-term', 'max') : int max value for offer term
-#     """
-#     if mortgage_term is not None:
-#         return mortgage_term - 1
-#     else:
-#         raise PreventUpdate
 
 
 if __name__ == "__main__":
