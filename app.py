@@ -124,7 +124,7 @@ def calc_ltv(deposit: int, price: int) -> str:
         price (int): price (£k)
 
     Returns:
-        str LTV for display in div
+        (str) : LTV for display in div
     """
     ltv = round((price - deposit) * 100 / price, 1)
     return f"{ltv}%", f"£{1000 * (price - deposit) :,}"
@@ -158,12 +158,12 @@ def plot_monthly_repayments(
     Callback to plot the payment schedule and populate the total interest repaid.
 
     Args:
-        deposit (): int deposit amount (£k)
-        purchase_price (): int price (£k)
-        term (): int mortgage length (years)
-        interest_rate (): float interest rate (% annual)
-        offer_term (): int length of introductory offer (years)
-        offer_rate (): float
+        deposit (int): deposit amount (£k)
+        purchase_price (int): price (£k)
+        term (int): mortgage length (years)
+        interest_rate (float): interest rate (% annual)
+        offer_term (int): length of introductory offer (years)
+        offer_rate (float): interest rate during offer period (% annual)
 
     Returns:
 
@@ -196,7 +196,6 @@ def plot_monthly_repayments(
         figure = {
             "data": [{"x": x, "y": y, "type": "bar",},],
             "layout": {
-                "title": "Mortgage repayment schedule",
                 "xaxis": {"title": "Months"},
                 "yaxis": {"title": "Monthly payment (£)"},
                 "clickmode": "event+select",
@@ -220,11 +219,11 @@ def calc_monthly_payment(
     https://en.wikipedia.org/wiki/Mortgage_calculator
 
     Args:
-        total_borrowed (): total amount borrowed
-        r (): annual interest rate (%)
-        term (): length of mortgage (years)
+        total_borrowed (int): total amount borrowed
+        r (float): annual interest rate (%)
+        term (int): length of mortgage (years)
     Returns:
-        float monthly payment
+        (float) : monthly payment
     """
     # Convert from years to months
     n_payments = term * 12
@@ -240,13 +239,13 @@ def compute_remaining_balance(
     Computes remaining balance left on loan after end of offer_term periods
 
     Args:
-        total_borrowed (): total amount initially borrowed
-        r (): interest rate paid (%)
-        offer_term (): length of offer period
-        term (): total length of loan
+        total_borrowed (int): total amount initially borrowed
+        r (float): interest rate paid (%)
+        offer_term (int): length of offer period
+        term (int): total length of loan
 
     Returns:
-        float remaining balance on loan
+        (float) : remaining balance on loan
     """
     # Formula from https://www.mtgprofessor.com/formulas.htm
     # Convert to decimal monthly interest rate
