@@ -114,7 +114,19 @@ second_card = dbc.Card(
 app.layout = html.Div(
     [
         dbc.Row([dbc.Col(first_card, width=6), dbc.Col(second_card, width=6)]),
-        dbc.Row([dbc.Col(dcc.Graph(id="mortgage-plot"), width=12)]),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardHeader("Mortgage repayment schedule"),
+                            dbc.CardBody(dcc.Graph(id="mortgage-plot")),
+                        ]
+                    ),
+                    width=12,
+                ),
+            ]
+        ),
     ],
 )
 
