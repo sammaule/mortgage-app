@@ -18,21 +18,21 @@ first_card = dbc.Card(
         dbc.CardHeader("Input details"),
         dbc.CardBody(
             [
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Deposit size (£k)",
-                        dcc.Input(id="deposit-size", value=150, type="number"),
+                        dbc.Label("Deposit size (£k)"),
+                        dbc.Input(id="deposit-size", value=150, type="number"),
                     ]
                 ),
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Purchase price (£k)",
-                        dcc.Input(id="purchase-price", value=375, type="number"),
+                        dbc.Label("Purchase price (£k)"),
+                        dbc.Input(id="purchase-price", value=375, type="number"),
                     ]
                 ),
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Offer term (years): ",
+                        dbc.Label("Offer term (years): "),
                         dcc.Slider(
                             id="offer-term",
                             value=3,
@@ -43,9 +43,9 @@ first_card = dbc.Card(
                         ),
                     ]
                 ),
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Mortgage term (years): ",
+                        dbc.Label("Mortgage term (years): "),
                         dcc.Slider(
                             id="mortgage-term",
                             value=20,
@@ -56,27 +56,29 @@ first_card = dbc.Card(
                         ),
                     ]
                 ),
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Initial interest rate (%): ",
-                        dcc.Input(
+                        dbc.Label("Initial interest rate (%): "),
+                        dbc.Input(
                             id="initial-interest-rate",
                             value=1.05,
                             type="number",
-                            min=0.01,
+                            min=0,
                             max=100,
+                            step=0.01
                         ),
                     ]
                 ),
-                html.Div(
+                dbc.FormGroup(
                     [
-                        "Interest rate (%): ",
-                        dcc.Input(
+                        dbc.Label("Interest rate (%): "),
+                        dbc.Input(
                             id="interest-rate",
-                            value=3.0,
+                            value=3.00,
                             type="number",
-                            min=0.01,
+                            min=0,
                             max=100,
+                            step=0.01
                         ),
                     ]
                 ),
@@ -90,10 +92,11 @@ second_card = dbc.Card(
         dbc.CardHeader("Output"),
         dbc.CardBody(
             [
-                html.Div(id="total-repaid"),
-                html.Div(id="ltv"),
-                html.Div(id="monthly-payment-offer"),
-                html.Div(id="monthly-payment"),
+                html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-size")]),
+                html.Div([dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]),
+                html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
+                html.Div([dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer")]),
+                html.Div([dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]),
             ]
         ),
     ]
@@ -108,7 +111,8 @@ app.layout = html.Div(
 
 
 @app.callback(
-    Output("ltv", "children"),
+    [Output("ltv", "children"),
+     Output("mortgage-size", "children")],
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
 )
 def calc_ltv(deposit: int, price: int) -> str:
@@ -116,14 +120,14 @@ def calc_ltv(deposit: int, price: int) -> str:
     Returns LTV of mortgage.
 
     Args:
-        deposit (): int deposit size (£k)
-        price (): int price (£k)
+        deposit (int):  deposit size (£k)
+        price (int): price (£k)
 
     Returns:
         str LTV for display in div
     """
     ltv = round((price - deposit) * 100 / price, 1)
-    return f"LTV: {ltv}%"
+    return f"{ltv}%", f"£{1000 * (price - deposit) :,}"
 
 
 @app.callback(
@@ -200,9 +204,9 @@ def plot_monthly_repayments(
         }
         # Create strings for output
         interest_paid = int(np.sum(y) - total_borrowed)
-        interest_paid = f"Total interest paid: £{interest_paid:,}"
-        offer_m_payment = f"Initial offer monthly payment: £{offer_m_payment :,.2f}"
-        m_payment = f"Regular monthly payment: £{m_payment :,.2f}"
+        interest_paid = f"£{interest_paid:,}"
+        offer_m_payment = f"£{offer_m_payment :,.2f}"
+        m_payment = f"£{m_payment :,.2f}"
         return figure, interest_paid, offer_m_payment, m_payment
     else:
         raise PreventUpdate
