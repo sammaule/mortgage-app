@@ -15,7 +15,7 @@ styles = {"pre": {"border": "thin lightgrey solid", "overflowX": "scroll"}}
 
 first_card = dbc.Card(
     [
-        dbc.CardHeader("Input details"),
+        dbc.CardHeader("Mortgage details:"),
         dbc.CardBody(
             [
                 dbc.FormGroup(
@@ -89,7 +89,7 @@ first_card = dbc.Card(
 
 second_card = dbc.Card(
     [
-        dbc.CardHeader("Output"),
+        dbc.CardHeader("Mortgage info:"),
         dbc.CardBody(
             [
                 html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-size")]),
