@@ -1,5 +1,5 @@
 """ entry point for app."""
-from typing import Tuple, Dict, Union
+from typing import Tuple, Union
 
 import dash
 import dash_bootstrap_components as dbc
@@ -135,7 +135,7 @@ app.layout = html.Div(
     [Output("ltv", "children"), Output("mortgage-size", "children")],
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
 )
-def calc_ltv(deposit: int, price: int) -> str:
+def calc_ltv(deposit: int, price: int) -> Tuple[str, str]:
     """
     Returns LTV of mortgage.
 
@@ -146,8 +146,14 @@ def calc_ltv(deposit: int, price: int) -> str:
     Returns:
         (str) : LTV for display in div
     """
-    ltv = round((price - deposit) * 100 / price, 1)
-    return f"{ltv}%", f"£{1000 * (price - deposit) :,}"
+    if all(
+            v is not None
+            for v in [deposit, price]
+    ):
+        ltv = round((price - deposit) * 100 / price, 1)
+        return f"{ltv}%", f"£{1000 * (price - deposit) :,}"
+    else:
+        raise PreventUpdate
 
 
 @app.callback(
