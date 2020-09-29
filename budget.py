@@ -1,7 +1,6 @@
 """Code for the budget page of the app."""
 import datetime
 
-import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
@@ -12,7 +11,7 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
-app = dash.Dash(external_stylesheets=[dbc.themes.FLATLY])
+from app import app
 
 savings_card = dbc.Card(
     [
@@ -73,7 +72,7 @@ income_and_tax_card = dbc.Card(
     ]
 )
 
-app.layout = html.Div(
+layout = html.Div(
     [
         dbc.Row(
             [dbc.Col([savings_card], width=6), dbc.Col([income_and_tax_card], width=6)]
@@ -116,6 +115,7 @@ def calc_ltv(
         saving_rate (int): Amount saved each month
         r (float): interest rate (%)
     """
+    # TODO: Improve hover text diplayed to show savings at each timepoint
     if all(v is not None for v in [savings, saving_rate, r]):
         fig = go.Figure()
 
@@ -210,7 +210,3 @@ def stamp_duty_payable(price: int, higher_rate: bool) -> float:
         else:
             payable += max(0, (price - sum(lease_premiums[:i])) * rate)
     return payable
-
-
-if __name__ == "__main__":
-    app.run_server(debug=True)
