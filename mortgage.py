@@ -95,6 +95,7 @@ second_card = dbc.Card(
                     [dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]
                 ),
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
+                # TODO: Add an LTI
                 html.Div(
                     [
                         dbc.Label("Monthly payment (offer period):"),

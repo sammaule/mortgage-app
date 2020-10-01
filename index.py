@@ -21,6 +21,7 @@ navbar = dbc.NavbarSimple(
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     navbar,
+    # TODO: Add welcome to app page - with "next" button to take user to budget page
     html.Div(id='page-content')
 ])
 
