@@ -10,16 +10,16 @@ import mortgage
 
 navbar = dbc.NavbarSimple(
     children=[
-        dbc.NavItem(dbc.NavLink("Mortgage", href="/mortgage")),
         dbc.NavItem(dbc.NavLink("Budget", href="/budget")),
+        dbc.NavItem(dbc.NavLink("Mortgage", href="/mortgage")),
     ],
     brand="Mortgage app",
     brand_href="/",
 )
 
-# TODO: Store key variables so can store data between pages
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
+    dcc.Store(id="data-store", storage_type="session"),
     navbar,
     # TODO: Add welcome to app page - with "next" button to take user to budget page
     html.Div(id='page-content')

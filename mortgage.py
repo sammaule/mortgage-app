@@ -1,10 +1,11 @@
 """ entry point for app."""
+import json
 from typing import Tuple, Union
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import numpy as np
 from dash.exceptions import PreventUpdate
 
@@ -19,13 +20,13 @@ first_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Deposit size (£k)"),
-                        dbc.Input(id="deposit-size", value=150, type="number"),
+                        dbc.Input(id="deposit-size", type="number"),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Purchase price (£k)"),
-                        dbc.Input(id="purchase-price", value=375, type="number"),
+                        dbc.Input(id="purchase-price", type="number"),
                     ]
                 ),
                 dbc.FormGroup(
@@ -95,7 +96,7 @@ second_card = dbc.Card(
                     [dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]
                 ),
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
-                # TODO: Add an LTI
+                html.Div([dbc.Label("LTI:"), html.H5(id="lti")]),
                 html.Div(
                     [
                         dbc.Label("Monthly payment (offer period):"),
@@ -131,10 +132,33 @@ layout = html.Div(
 
 
 @app.callback(
-    [Output("ltv", "children"), Output("mortgage-size", "children")],
-    [Input("deposit-size", "value"), Input("purchase-price", "value")],
+    [Output("deposit-size", "value"),
+     Output("purchase-price", "value"),
+     ],
+    [Input("data-store", "data")]
 )
-def calc_ltv(deposit: int, price: int) -> Tuple[str, str]:
+def fill_data_values(data):
+    """
+
+    Args:
+        data (str): json string
+
+    Returns:
+        deposit size, purchase price and income (Tuple[float, float, float])
+    """
+    if data:
+        data = json.loads(data)
+        deposit = data.get("deposit") / 1000
+        value = data.get("value")[0] / 1000
+        return deposit, value
+
+
+@app.callback(
+    [Output("ltv", "children"), Output("mortgage-size", "children"), Output("lti", "children")],
+    [Input("deposit-size", "value"), Input("purchase-price", "value")],
+    [State("data-store", "data")],
+)
+def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
     """
     Returns LTV of mortgage.
 
@@ -149,8 +173,13 @@ def calc_ltv(deposit: int, price: int) -> Tuple[str, str]:
             v is not None
             for v in [deposit, price]
     ):
+        data = json.loads(data)
         ltv = round((price - deposit) * 100 / price, 1)
-        return f"{ltv}%", f"£{1000 * (price - deposit) :,}"
+        lti = (price - deposit) / data.get("income")
+        ltv_str = f"{ltv}%"
+        lti_str = f"{round(lti, 1)}"
+        mortgage_str = f"£{1000 * (price - deposit) :,}"
+        return ltv_str, mortgage_str, lti_str
     else:
         raise PreventUpdate
 

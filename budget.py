@@ -1,5 +1,6 @@
 """Code for the budget page of the app."""
 import datetime
+import json
 import re
 from datetime import datetime as dt
 
@@ -93,11 +94,9 @@ budget_results_card = dbc.Card([
     dbc.CardHeader("Budget results"),
     dbc.CardBody(
         [
-            # TODO: Store these values in browser memory
-            # TODO: Calculate the values
             html.Div([dbc.Label("Deposit on target date"), html.H5(id="deposit-on-target-date")]),
-            html.Div([dbc.Label("Mortgage available on target date"), html.H5(id="mortgage-on-target-date", children="£100,000-£200,000")]),
-            html.Div([dbc.Label("Total property value"), html.H5(id="property-value-on-target-date", children="£200,000-£300,000")]),
+            html.Div([dbc.Label("Mortgage available on target date"), html.H5(id="mortgage-on-target-date")]),
+            html.Div([dbc.Label("Total property value"), html.H5(id="property-value-on-target-date")]),
         ]
     )
     ]
@@ -132,6 +131,7 @@ layout = html.Div(
      Output("deposit-on-target-date", "children"),
      Output("mortgage-on-target-date", "children"),
      Output("property-value-on-target-date", "children"),
+     Output("data-store", "data")
      ],
     [
         Input("current-savings", "value"),
@@ -144,7 +144,7 @@ layout = html.Div(
 )
 def calc_ltv(
     savings: int, saving_rate: int, r: float, income: int, stamp_duty_rate: str, target_date: str
-) -> Tuple[go.Figure, str, str, str]:
+) -> Tuple[go.Figure, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
     Assumes that all interest is paid monthly at a rate of 1/12*r and all reinvested.
@@ -235,7 +235,13 @@ def calc_ltv(
         property_value_l, property_value_h = mortgage_l + deposit_on_target_date, mortgage_h + deposit_on_target_date
         property_value_on_target_date_str = f"£{int(property_value_l): ,} - £{int(property_value_h): ,}"
 
-        return fig, deposit_on_target_date_str, mortgage_on_target_date_str, property_value_on_target_date_str
+        data_storage = {"deposit": deposit_on_target_date,
+                        "mortgage": [mortgage_l, mortgage_h],
+                        "value": [property_value_l, property_value_h],
+                        "income": income}
+        data_storage = json.dumps(data_storage)
+
+        return fig, deposit_on_target_date_str, mortgage_on_target_date_str, property_value_on_target_date_str, data_storage
     else:
         raise PreventUpdate
 
