@@ -148,8 +148,8 @@ def fill_data_values(data):
     """
     if data:
         data = json.loads(data)
-        deposit = data.get("deposit") / 1000
-        value = data.get("value")[0] / 1000
+        deposit = round(data.get("deposit")[0] / 1000, 2)
+        value = round(data.get("value")[0] / 1000, 2)
         return deposit, value
 
 

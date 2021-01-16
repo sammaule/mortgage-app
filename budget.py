@@ -37,9 +37,7 @@ savings_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Savings interest (%)"),
-                        dbc.Input(
-                            id="savings-interest", value=1.12, step=0.01, type="number",
-                        ),
+                        dbc.Input(id="savings-interest", value=1.12, step=0.01, type="number",),
                     ]
                 ),
             ]
@@ -78,73 +76,83 @@ income_and_tax_card = dbc.Card(
                         dbc.Label("Target purchase date"),
                         html.Br(),
                         html.Br(),
-                        dcc.DatePickerSingle(id="target-purchase-date",
-                                             date=datetime.datetime.today(),
-                                             min_date_allowed=datetime.datetime.today(),
-                                             max_date_allowed=dt(2022, 12, 31),
-                                             display_format="DD/MM/YYYY")
+                        dcc.DatePickerSingle(
+                            id="target-purchase-date",
+                            date=datetime.datetime.today(),
+                            min_date_allowed=datetime.datetime.today(),
+                            max_date_allowed=dt(2022, 12, 31),
+                            display_format="DD/MM/YYYY",
+                        ),
                     ]
-                )
+                ),
             ]
         ),
     ]
 )
 
-budget_results_card = dbc.Card([
-    dbc.CardHeader("Budget results"),
-    dbc.CardBody(
-        [
-            html.Div([dbc.Label("Deposit on target date"), html.H5(id="deposit-on-target-date")]),
-            html.Div([dbc.Label("Mortgage available on target date"), html.H5(id="mortgage-on-target-date")]),
-            html.Div([dbc.Label("Total property value"), html.H5(id="property-value-on-target-date")]),
-        ]
-    )
+budget_results_card = dbc.Card(
+    [
+        dbc.CardHeader("Budget results"),
+        dbc.CardBody(
+            [
+                html.Div([dbc.Label("Deposit on target date"), html.H5(id="deposit-on-target-date")]),
+                html.Div(
+                    [dbc.Label("Mortgage available on target date"), html.H5(id="mortgage-on-target-date")]
+                ),
+                html.Div(
+                    [
+                        dbc.Label("Total property value:"),
+                        html.H5(id="property-value-on-target-date"),
+                    ]
+                ),
+                html.Div([dbc.Label("Stamp duty range:"), html.H5(id="stamp-duty-on-target-date")]),
+            ]
+        ),
     ]
 )
 
 layout = html.Div(
     [
         # TODO: Add a row at the top which asks user to fill in their details
+        dbc.Row([dbc.Col([savings_card], width=6), dbc.Col([income_and_tax_card], width=6)]),
         dbc.Row(
-            [dbc.Col([savings_card], width=6), dbc.Col([income_and_tax_card], width=6)]
-        ),
-        dbc.Row([
-            dbc.Col([budget_results_card], width=3),
-            dbc.Col(
-                [
-                    dbc.Card(
-                        [
-                            dbc.CardHeader("Maximum budget"),
-                            dbc.CardBody(dcc.Graph(id="budget-plot")),
-                        ]
-                    )
-                ],
-                width=9,
-            ),
+            [
+                dbc.Col([budget_results_card], width=3),
+                dbc.Col(
+                    [
+                        dbc.Card(
+                            [dbc.CardHeader("Maximum budget"), dbc.CardBody(dcc.Graph(id="budget-plot")),]
+                        )
+                    ],
+                    width=9,
+                ),
             ]
         ),
     ]
 )
 
+
 @app.callback(
-    [Output("budget-plot", "figure"),
-     Output("deposit-on-target-date", "children"),
-     Output("mortgage-on-target-date", "children"),
-     Output("property-value-on-target-date", "children"),
-     Output("data-store", "data")
-     ],
+    [
+        Output("budget-plot", "figure"),
+        Output("deposit-on-target-date", "children"),
+        Output("mortgage-on-target-date", "children"),
+        Output("property-value-on-target-date", "children"),
+        Output("stamp-duty-on-target-date", "children"),
+        Output("data-store", "data"),
+    ],
     [
         Input("current-savings", "value"),
         Input("saving-rate", "value"),
         Input("savings-interest", "value"),
         Input("income", "value"),
         Input("stamp-duty-rate", "value"),
-        Input("target-purchase-date", "date")
+        Input("target-purchase-date", "date"),
     ],
 )
 def calc_ltv(
     savings: int, saving_rate: int, r: float, income: int, stamp_duty_rate: str, target_date: str
-) -> Tuple[go.Figure, str, str, str, str]:
+) -> Tuple[go.Figure, str, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
     Assumes that all interest is paid monthly at a rate of 1/12*r and all reinvested.
@@ -161,34 +169,23 @@ def calc_ltv(
         x = pd.date_range(datetime.datetime.now(), periods=24, freq="M")
 
         savings_array = np.array(
-            [
-                npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000))
-                for i in range(24)
-            ]
+            [npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000)) for i in range(24)]
         )
 
-        budget_h = savings_array + 4.7 * (income * 1000)
-        budget_m = savings_array + 4.5 * (income * 1000)
-        budget_l = savings_array + 4.3 * (income * 1000)
+        mortgage_h = 4.7 * (income * 1000)
+        mortgage_m = 4.5 * (income * 1000)
+        mortgage_l = 4.3 * (income * 1000)
 
         higher_rate = True if stamp_duty_rate == "higher_rate" else False
+
         budget_h = np.array(
-            [
-                price - stamp_duty_payable(price, higher_rate=higher_rate)
-                for price in budget_h
-            ]
+            [iterative_p(s, mortgage_h, stamp_duty_payable, higher_rate)[1] for s in savings_array]
         )
         budget_m = np.array(
-            [
-                price - stamp_duty_payable(price, higher_rate=higher_rate)
-                for price in budget_m
-            ]
+            [iterative_p(s, mortgage_m, stamp_duty_payable, higher_rate)[1] for s in savings_array]
         )
         budget_l = np.array(
-            [
-                price - stamp_duty_payable(price, higher_rate=higher_rate)
-                for price in budget_l
-            ]
+            [iterative_p(s, mortgage_l, stamp_duty_payable, higher_rate)[1] for s in savings_array]
         )
 
         fig.add_trace(
@@ -222,26 +219,41 @@ def calc_ltv(
         )
 
         # Work out the values on the target date
-        end_date = datetime.datetime.strptime(re.split('T| ', target_date)[0], '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(re.split("T| ", target_date)[0], "%Y-%m-%d")
         start_date = datetime.datetime.today()
         num_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 
-        deposit_on_target_date = npf.fv((r / 100) / 12, num_months, -saving_rate, -(savings * 1000))
-        deposit_on_target_date_str = f"£{int(deposit_on_target_date): ,}"
-
         mortgage_l, mortgage_h = 4.3 * income * 1000, 4.7 * income * 1000
+        savings_on_target_date = npf.fv((r / 100) / 12, num_months, -saving_rate, -(savings * 1000))
+
+        # Work out deposit, stamp duty and max affordable price for each mortgage size
+        deposit_l, property_value_l, stamp_duty_l = iterative_p(savings_on_target_date, mortgage_l, stamp_duty_payable,
+                                                                higher_rate)
+        deposit_h, property_value_h, stamp_duty_h = iterative_p(savings_on_target_date, mortgage_h, stamp_duty_payable,
+                                                                higher_rate)
+
+        deposit_on_target_date_str = f"£{int(deposit_l): ,} - £{int(deposit_h): ,}"
         mortgage_on_target_date_str = f"£{int(mortgage_l): ,} - £{int(mortgage_h): ,}"
-
-        property_value_l, property_value_h = mortgage_l + deposit_on_target_date, mortgage_h + deposit_on_target_date
         property_value_on_target_date_str = f"£{int(property_value_l): ,} - £{int(property_value_h): ,}"
+        stamp_duty_on_target_date_str = f"£{int(stamp_duty_l): ,} - £{int(stamp_duty_h): ,}"
 
-        data_storage = {"deposit": deposit_on_target_date,
-                        "mortgage": [mortgage_l, mortgage_h],
-                        "value": [property_value_l, property_value_h],
-                        "income": income}
+        data_storage = {
+            "deposit": [deposit_l, deposit_h],
+            "mortgage": [mortgage_l, mortgage_h],
+            "value": [property_value_l, property_value_h],
+            "stamp_duty": [stamp_duty_l, stamp_duty_h],
+            "income": income,
+        }
         data_storage = json.dumps(data_storage)
 
-        return fig, deposit_on_target_date_str, mortgage_on_target_date_str, property_value_on_target_date_str, data_storage
+        return (
+            fig,
+            deposit_on_target_date_str,
+            mortgage_on_target_date_str,
+            property_value_on_target_date_str,
+            stamp_duty_on_target_date_str,
+            data_storage,
+        )
     else:
         raise PreventUpdate
 
@@ -270,3 +282,28 @@ def stamp_duty_payable(price: int, higher_rate: bool) -> float:
         else:
             payable += max(0, (price - sum(lease_premiums[:i])) * rate)
     return payable
+
+
+def iterative_p(s, m, stamp_duty_payable, higher_rate):
+    """
+    Iteratively works out the maximum price affordable inclusive of stamp duty.
+
+    Args:
+        s: total savings
+        m: mortage size available
+        stamp_duty_payable: function to compute stamp_duty
+        higher_rate: bool to indicate which stamp duty is payable
+
+    Returns:
+        deposit size, maximum price, stamp duty payable
+    """
+    old_sd, sd = 0, 100
+    while abs(old_sd - sd) > 0.01:
+        p = s - old_sd + m
+        sd = stamp_duty_payable(p, higher_rate)
+        new_p = s - sd + m
+        old_sd = sd
+        sd = stamp_duty_payable(new_p, higher_rate)
+
+    deposit = s - sd
+    return deposit, p, sd
