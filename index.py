@@ -34,7 +34,7 @@ def display_page(pathname):
     elif pathname == '/budget':
         return budget.layout
     else:
-        return '404'
+        return budget.layout
 
 
 if __name__ == '__main__':
