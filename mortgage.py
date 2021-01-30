@@ -19,13 +19,13 @@ first_card = dbc.Card(
             [
                 dbc.FormGroup(
                     [
-                        dbc.Label("Deposit size"),
+                        dbc.Label("Deposit size (£ ,000)"),
                         dbc.Input(id="deposit-size", type="number"),
                     ]
                 ),
                 dbc.FormGroup(
                     [
-                        dbc.Label("Purchase price"),
+                        dbc.Label("Purchase price (£ ,000)"),
                         dbc.Input(id="purchase-price", type="number"),
                     ]
                 ),
@@ -179,7 +179,7 @@ def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
         lti = (price - deposit) / data.get("income")
         ltv_str = f"{ltv}%"
         lti_str = f"{round(lti, 1)}"
-        mortgage_str = f"£{round(1000 * (price - deposit), 0) :,}"
+        mortgage_str = f"£{int(1000 * (price - deposit)) :,}"
         return ltv_str, mortgage_str, lti_str
     else:
         raise PreventUpdate
