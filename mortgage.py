@@ -11,7 +11,6 @@ from dash.exceptions import PreventUpdate
 
 from app import app
 
-# TODO: Allow LTI to be set manually to range of values (or just one value)
 
 first_card = dbc.Card(
     [

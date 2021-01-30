@@ -2,7 +2,6 @@
 import datetime
 import json
 import re
-from datetime import datetime as dt
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -89,9 +88,8 @@ income_and_tax_card = dbc.Card(
                         html.Br(),
                         dcc.DatePickerSingle(
                             id="target-purchase-date",
-                            date=datetime.datetime(2021, 9, 1),
+                            date=datetime.datetime.today() + datetime.timedelta(days=9*30),
                             min_date_allowed=datetime.datetime.today(),
-                            max_date_allowed=dt(2022, 12, 31),
                             display_format="DD/MM/YYYY",
                         ),
                     ]
@@ -126,18 +124,17 @@ budget_results_card = dbc.Card(
 
 layout = html.Div(
     [
-        # TODO: Add a row at the top which asks user to fill in their details
         dbc.Row([dbc.Col([savings_card], width=6), dbc.Col([income_and_tax_card], width=6)]),
         dbc.Row(
             [
-                dbc.Col([budget_results_card], width=3),
+                dbc.Col([budget_results_card], width=5),
                 dbc.Col(
                     [
                         dbc.Card(
-                            [dbc.CardHeader("Maximum budget"), dbc.CardBody(dcc.Graph(id="budget-plot")),]
+                            [dbc.CardHeader("Affordability to target date"), dbc.CardBody(dcc.Graph(id="budget-plot")),]
                         )
                     ],
-                    width=9,
+                    width=7,
                 ),
             ]
         ),
@@ -176,14 +173,16 @@ def calc_ltv(
         saving_rate (int): Amount saved each month
         r (float): interest rate (%)
     """
-    # TODO: Improve hover text diplayed to show savings at each timepoint
     if all(v is not None for v in [savings, saving_rate, r]):
         fig = go.Figure()
 
-        x = pd.date_range(datetime.datetime.now(), periods=24, freq="M")
+        start_date = datetime.datetime.today()
+        end_date = datetime.datetime.strptime(re.split("T| ", target_date)[0], "%Y-%m-%d")
+        periods = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+        x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
 
         savings_array = np.array(
-            [npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000)) for i in range(24)]
+            [npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000)) for i in range(periods)]
         )
 
         mortgage = lti * (income * 1000)
@@ -200,12 +199,12 @@ def calc_ltv(
                 y=budget,
                 fillcolor="rgba(0,176,246,0.2)",
                 line={"color": "black", "width": 0.8},
-                name=f"{lti} LTI",
+                hovertemplate="Date: %{x} \nMax affordable: £%{y:,.3r}<extra></extra>"
             )
         )
 
         # Work out the values on the target date
-        end_date = datetime.datetime.strptime(re.split("T| ", target_date)[0], "%Y-%m-%d")
+
         start_date = datetime.datetime.today()
         num_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 
