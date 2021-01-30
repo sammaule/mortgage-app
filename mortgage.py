@@ -1,4 +1,4 @@
-""" entry point for app."""
+""""""
 import json
 from typing import Tuple, Union
 
