@@ -20,13 +20,13 @@ first_card = dbc.Card(
             [
                 dbc.FormGroup(
                     [
-                        dbc.Label("Deposit size (£k)"),
+                        dbc.Label("Deposit size"),
                         dbc.Input(id="deposit-size", type="number"),
                     ]
                 ),
                 dbc.FormGroup(
                     [
-                        dbc.Label("Purchase price (£k)"),
+                        dbc.Label("Purchase price"),
                         dbc.Input(id="purchase-price", type="number"),
                     ]
                 ),
@@ -97,7 +97,7 @@ second_card = dbc.Card(
                     [dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]
                 ),
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
-                html.Div([dbc.Label("LTI:"), html.H5(id="lti")]),
+                html.Div([dbc.Label("LTI:"), html.H5(id="lti-mortgage")]),
                 html.Div(
                     [
                         dbc.Label("Monthly payment (offer period):"),
@@ -136,9 +136,10 @@ layout = html.Div(
     [Output("deposit-size", "value"),
      Output("purchase-price", "value"),
      ],
-    [Input("data-store", "data")]
+    [Input("url", "pathname")],
+    State("data-store", "data")
 )
-def fill_data_values(data):
+def fill_data_values(url, data):
     """
 
     Args:
@@ -149,13 +150,13 @@ def fill_data_values(data):
     """
     if data:
         data = json.loads(data)
-        deposit = round(data.get("deposit")[0] / 1000, 2)
-        value = round(data.get("value")[0] / 1000, 2)
+        deposit = round(data.get("deposit") / 1000, 3)
+        value = round(data.get("value") / 1000, 3)
         return deposit, value
 
 
 @app.callback(
-    [Output("ltv", "children"), Output("mortgage-size", "children"), Output("lti", "children")],
+    [Output("ltv", "children"), Output("mortgage-size", "children"), Output("lti-mortgage", "children")],
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
     [State("data-store", "data")],
 )
@@ -179,7 +180,7 @@ def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
         lti = (price - deposit) / data.get("income")
         ltv_str = f"{ltv}%"
         lti_str = f"{round(lti, 1)}"
-        mortgage_str = f"£{1000 * (price - deposit) :,}"
+        mortgage_str = f"£{round(1000 * (price - deposit), 0) :,}"
         return ltv_str, mortgage_str, lti_str
     else:
         raise PreventUpdate
