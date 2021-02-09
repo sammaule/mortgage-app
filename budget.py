@@ -220,6 +220,7 @@ def calc_ltv(
         stamp_duty_on_target_date_str = f"£{int(stamp_duty): ,}"
 
         data_storage = {
+            "savings": savings,
             "deposit": deposit,
             "mortgage": mortgage,
             "value": property_value,
