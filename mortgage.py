@@ -136,7 +136,7 @@ layout = html.Div(
      Output("purchase-price", "value"),
      ],
     [Input("url", "pathname")],
-    State("data-store", "data")
+    [State("data-store", "data")],
 )
 def fill_data_values(url, data):
     """

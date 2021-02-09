@@ -7,11 +7,13 @@ from dash.dependencies import Input, Output
 from app import app
 import budget
 import mortgage
+import asset_allocation
 
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Budget", href="/budget")),
         dbc.NavItem(dbc.NavLink("Mortgage", href="/mortgage")),
+        dbc.NavItem(dbc.NavLink("Asset Allocation", href="/asset_allocation"))
     ],
     brand="Mortgage app",
     brand_href="/",
@@ -33,6 +35,8 @@ def display_page(pathname):
         return mortgage.layout
     elif pathname == '/budget':
         return budget.layout
+    elif pathname == '/asset_allocation':
+        return asset_allocation.layout
     else:
         return budget.layout
 
