@@ -1,4 +1,5 @@
 """Contains the layout and callbacks for the Asset allocation page."""
+import datetime
 import json
 import math
 from typing import Optional, Tuple, Dict
@@ -7,9 +8,11 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 from dash.dependencies import Input, Output, State
-
 from dash.exceptions import PreventUpdate
-
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+import numpy_financial as npf
 
 from app import app
 
@@ -70,11 +73,12 @@ expected_annual_returns_card = dbc.Card(
                     [
                         dbc.Label("Property"),
                         dbc.Input(
-                            id="expected-property-asset-growth",
+                            id="property-r",
                             type="number",
                             min=0,
                             step=0.1,
                             max=1000,
+                            value=2.,
                         ),
                     ]
                 ),
@@ -82,11 +86,12 @@ expected_annual_returns_card = dbc.Card(
                     [
                         dbc.Label("Cash"),
                         dbc.Input(
-                            id="expected-cash-asset-growth",
+                            id="cash-r",
                             type="number",
                             min=0,
                             step=0.1,
                             max=1000,
+                            value=0.5,
                         ),
                     ]
                 ),
@@ -94,11 +99,12 @@ expected_annual_returns_card = dbc.Card(
                     [
                         dbc.Label("Securities"),
                         dbc.Input(
-                            id="expected-securities-asset-growth",
+                            id="securities-r",
                             type="number",
                             min=0,
                             step=0.1,
                             max=1000,
+                            value=4.,
                         ),
                     ]
                 ),
@@ -107,7 +113,19 @@ expected_annual_returns_card = dbc.Card(
     ]
 )
 
-layout = html.Div(dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6)]))
+chart_card = dbc.Card(
+    [
+        dbc.CardHeader("Asset value over time"),
+        dbc.CardBody([dcc.Graph(id="allocation-plot")]),
+    ]
+)
+
+layout = html.Div(
+    [
+        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6)]),
+        dbc.Row([dbc.Col(chart_card, width=12)])
+    ]
+)
 
 
 @app.callback(
@@ -206,3 +224,82 @@ def fill_wealth_value(url: str, data: str) -> int:
         return savings
     else:
         return 0
+
+@app.callback(
+    Output("allocation-plot", "figure"),
+    [Input("cash-r", "value"),
+     Input("property-r", "value"),
+     Input("securities-r", "value"),
+     Input("cash-allocation", "value"),
+     Input("property-allocation", "value"),
+     Input("securities-allocation", "value"),
+     ],
+)
+def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation):
+
+    fig = go.Figure()
+
+    start_date = datetime.datetime.today()
+    end_date = start_date + datetime.timedelta(days=10 * 365)
+    periods = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+    x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
+
+    cash_array = np.array(
+        [npf.fv((cash_r / 100) / 12, i, 0, -(cash_allocation * 1000)) for i in range(periods)]
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=cash_array,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "black", "width": 0.8},
+            name="Cash",
+            hovertemplate="Date: %{x} \nCash value: £%{y:,.3r}<extra></extra>"
+        )
+    )
+
+    property_array = np.array(
+        [npf.fv((property_r / 100) / 12, i, 0, -(property_allocation * 1000)) for i in range(periods)]
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=property_array,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "red", "width": 0.8},
+            name="Property",
+            hovertemplate="Date: %{x} \nProperty value: £%{y:,.3r}<extra></extra>"
+        )
+    )
+
+    securities_array = np.array(
+        [npf.fv((cash_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(periods)]
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=securities_array,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "blue", "width": 0.8},
+            name="Securities",
+            hovertemplate="Date: %{x} \nSecurities value: £%{y:,.3r}<extra></extra>"
+        )
+    )
+
+    total_array = cash_array + property_array + securities_array
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=total_array,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "black", "width": 1.5},
+            name="Total",
+            hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>"
+        )
+    )
+
+    return fig
