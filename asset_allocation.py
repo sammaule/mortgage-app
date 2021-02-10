@@ -61,7 +61,53 @@ allocation_card = dbc.Card(
     ]
 )
 
-layout = html.Div(dbc.Row([dbc.Col(allocation_card, width=6),]))
+expected_annual_returns_card = dbc.Card(
+    [
+        dbc.CardHeader("Expected asset price growth (% annual)"),
+        dbc.CardBody(
+            [
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Property"),
+                        dbc.Input(
+                            id="expected-property-asset-growth",
+                            type="number",
+                            min=0,
+                            step=0.1,
+                            max=1000,
+                        ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Cash"),
+                        dbc.Input(
+                            id="expected-cash-asset-growth",
+                            type="number",
+                            min=0,
+                            step=0.1,
+                            max=1000,
+                        ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Securities"),
+                        dbc.Input(
+                            id="expected-securities-asset-growth",
+                            type="number",
+                            min=0,
+                            step=0.1,
+                            max=1000,
+                        ),
+                    ]
+                ),
+            ]
+        ),
+    ]
+)
+
+layout = html.Div(dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6)]))
 
 
 @app.callback(
