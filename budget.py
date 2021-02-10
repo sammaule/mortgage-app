@@ -169,9 +169,9 @@ def calc_ltv(
     Assumes that all interest is paid monthly at a rate of 1/12*r and all reinvested.
 
     Args:
-        savings (int): Total current savings
-        saving_rate (int): Amount saved each month
-        r (float): interest rate (%)
+        savings: Total current savings
+        saving_rate: Amount saved each month
+        r: interest rate (%)
     """
     if all(v is not None for v in [savings, saving_rate, r]):
         fig = go.Figure()

@@ -1,6 +1,7 @@
 """Contains the layout and callbacks for the Asset allocation page."""
 import json
 import math
+from typing import Optional, Tuple, Dict
 
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -32,6 +33,7 @@ allocation_card = dbc.Card(
                             id="total-wealth-allocation",
                             type="number",
                             min=0,
+                            step=1,
                             max=100000,
                         ),
                     ]
@@ -78,9 +80,23 @@ layout = html.Div(dbc.Row([dbc.Col(allocation_card, width=6),]))
         Input("securities-allocation", "value"),
     ],
 )
-def fill_data_values(
-    total_wealth, property_allocation, cash_allocation, securities_allocation
-):
+def update_sliders(
+    total_wealth: Optional[int],
+    property_allocation: Optional[int],
+    cash_allocation: Optional[int],
+    securities_allocation: Optional[int],
+) -> Tuple[int, int, int, Dict[int, str], Dict[int, str], Dict[int, str]]:
+    """Updates sliders such that the max values add up to total wealth. Updates markers to
+    a range of sensible values according to total wealth.
+
+    Updates only if all input values are defined.
+
+    Args:
+        total_wealth: total wealth (£ thousands)
+        property_allocation: user allocation to property (£ thousands)
+        cash_allocation: user allocation to cash (£ thousands)
+        securities_allocation: user allocation to securities (£ thousands)
+    """
     if all(
         v is not None
         for v in [
@@ -128,16 +144,19 @@ def fill_data_values(
     [Input("url", "pathname")],
     [State("data-store", "data")],
 )
-def fill_data_values(url, data):
-    """
+def fill_wealth_value(url: str, data: str) -> int:
+    """"
+    Returns the total savings value defined by user on budget page, rounded to the nearest thousand.
 
     Args:
-        data (str): json string
+        data: json string
 
     Returns:
-        deposit size, purchase price and income (Tuple[float, float, float])
+        total wealth rounded to nearest thousand, or zero if not provided.
     """
     if data:
         data = json.loads(data)
-        savings = round(data.get("savings"), 3)
+        savings = int(round(data.get("savings")))
         return savings
+    else:
+        return 0
