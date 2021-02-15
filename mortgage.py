@@ -1,6 +1,6 @@
 """"""
 import json
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -18,16 +18,10 @@ first_card = dbc.Card(
         dbc.CardBody(
             [
                 dbc.FormGroup(
-                    [
-                        dbc.Label("Deposit size (£ ,000)"),
-                        dbc.Input(id="deposit-size", type="number"),
-                    ]
+                    [dbc.Label("Deposit size (£ ,000)"), dbc.Input(id="deposit-size", type="number"),]
                 ),
                 dbc.FormGroup(
-                    [
-                        dbc.Label("Purchase price (£ ,000)"),
-                        dbc.Input(id="purchase-price", type="number"),
-                    ]
+                    [dbc.Label("Purchase price (£ ,000)"), dbc.Input(id="purchase-price", type="number"),]
                 ),
                 dbc.FormGroup(
                     [
@@ -59,26 +53,14 @@ first_card = dbc.Card(
                     [
                         dbc.Label("Initial interest rate (%): "),
                         dbc.Input(
-                            id="initial-interest-rate",
-                            value=1.05,
-                            type="number",
-                            min=0,
-                            max=100,
-                            step=0.01,
+                            id="initial-interest-rate", value=1.05, type="number", min=0, max=100, step=0.01,
                         ),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Interest rate (%): "),
-                        dbc.Input(
-                            id="interest-rate",
-                            value=3.00,
-                            type="number",
-                            min=0,
-                            max=100,
-                            step=0.01,
-                        ),
+                        dbc.Input(id="interest-rate", value=3.00, type="number", min=0, max=100, step=0.01,),
                     ]
                 ),
             ]
@@ -92,24 +74,31 @@ second_card = dbc.Card(
         dbc.CardBody(
             [
                 html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-size")]),
-                html.Div(
-                    [dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]
-                ),
+                html.Div([dbc.Label("Total interest payable:"), html.H5(id="total-repaid")]),
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
                 html.Div([dbc.Label("LTI:"), html.H5(id="lti-mortgage")]),
                 html.Div(
-                    [
-                        dbc.Label("Monthly payment (offer period):"),
-                        html.H5(id="monthly-payment-offer"),
-                    ]
+                    [dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer"),]
                 ),
+                html.Div([dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]),
+                html.Br(),
                 html.Div(
-                    [dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]
+                    [
+                        dbc.Button("Save mortgage", color="primary", size="lg", id="save-button-mortgage"),
+                        dbc.Modal(
+                            [
+                                dbc.ModalHeader("Mortgage saved"),
+                                dbc.ModalBody("Go to asset allocation page to view."),
+                            ],
+                            id="mortgage-saved-popup",
+                        ),
+                    ]
                 ),
             ]
         ),
     ]
 )
+
 
 layout = html.Div(
     [
@@ -132,9 +121,7 @@ layout = html.Div(
 
 
 @app.callback(
-    [Output("deposit-size", "value"),
-     Output("purchase-price", "value"),
-     ],
+    [Output("deposit-size", "value"), Output("purchase-price", "value"),],
     [Input("url", "pathname")],
     [State("data-store", "data")],
 )
@@ -170,10 +157,7 @@ def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
     Returns:
         (str) : LTV for display in div
     """
-    if all(
-            v is not None
-            for v in [deposit, price]
-    ):
+    if all(v is not None for v in [deposit, price]):
         data = json.loads(data)
         ltv = round((price - deposit) * 100 / price, 1)
         lti = (price - deposit) / data.get("income")
@@ -202,12 +186,7 @@ def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
     ],
 )
 def plot_monthly_repayments(
-    deposit: int,
-    purchase_price: int,
-    term: int,
-    interest_rate: float,
-    offer_term: int,
-    offer_rate: float,
+    deposit: int, purchase_price: int, term: int, interest_rate: float, offer_term: int, offer_rate: float,
 ) -> Tuple[dict, str, str, str]:
     """
     Callback to plot the payment schedule and populate the total interest repaid.
@@ -223,10 +202,7 @@ def plot_monthly_repayments(
     Returns:
 
     """
-    if all(
-        v is not None
-        for v in [deposit, purchase_price, interest_rate, offer_term, offer_rate]
-    ):
+    if all(v is not None for v in [deposit, purchase_price, interest_rate, offer_term, offer_rate]):
         total_borrowed = (purchase_price - deposit) * 1000
 
         # Compute initial monthly payment
@@ -234,9 +210,7 @@ def plot_monthly_repayments(
         initial_payments = np.array([offer_m_payment] * offer_term * 12)
 
         # remaining balance on loan
-        balance = compute_remaining_balance(
-            total_borrowed, offer_rate, offer_term, term
-        )
+        balance = compute_remaining_balance(total_borrowed, offer_rate, offer_term, term)
 
         # Compute monthly payment according to formula here:
         remaining_term = term - offer_term
@@ -266,9 +240,60 @@ def plot_monthly_repayments(
         raise PreventUpdate
 
 
-def calc_monthly_payment(
-    total_borrowed: Union[int, float], r: float, term: int
-) -> float:
+# TODO: Add callback that:
+#               a) stores mortgage information in memory when save mortgage button clicked and
+#               b) brings up pop up window to say that the mortgage info was saved and can be used on the asset
+#                  allocation page.
+
+
+@app.callback(
+    [Output("data-store-mortgage", "data"), Output("mortgage-saved-popup", "is_open")],
+    [
+        Input("save-button-mortgage", "n_clicks"),
+        Input("deposit-size", "value"),
+        Input("purchase-price", "value"),
+        Input("mortgage-term", "value"),
+        Input("interest-rate", "value"),
+        Input("offer-term", "value"),
+        Input("initial-interest-rate", "value"),
+    ],
+    [State("data-store-mortgage", "data")],
+)
+def save_mortage_info(
+    n_clicks: Optional[int],
+    deposit: int,
+    purchase_price: int,
+    term: int,
+    interest_rate: float,
+    offer_term: int,
+    offer_rate: float,
+    data: Optional[str],
+):
+    if n_clicks is None:
+        raise PreventUpdate
+    else:
+        mortgage_data = {
+            "deposit": deposit,
+            "purchase_price": purchase_price,
+            "term": term,
+            "interest_rate": interest_rate,
+            "offer_term": offer_term,
+            "offer_rate": offer_rate,
+        }
+        if data is None:
+            data = json.dumps([mortgage_data])
+            return data, True
+        else:
+            existing_data = json.loads(data)
+            # If the mortgage data hasn't been added before append it
+            if all(i != mortgage_data for i in existing_data):
+                existing_data.append(mortgage_data)
+
+            existing_data = json.dumps(existing_data)
+            return existing_data, True
+
+
+def calc_monthly_payment(total_borrowed: Union[int, float], r: float, term: int) -> float:
     """
     Function to compute monthly mortgage repayments.
     https://en.wikipedia.org/wiki/Mortgage_calculator
@@ -287,9 +312,7 @@ def calc_monthly_payment(
     return (total_borrowed * offer_r) / (1 - (1 + offer_r) ** -n_payments)
 
 
-def compute_remaining_balance(
-    total_borrowed: int, r: float, offer_term: int, term: int
-) -> float:
+def compute_remaining_balance(total_borrowed: int, r: float, offer_term: int, term: int) -> float:
     """
     Computes remaining balance left on loan after end of offer_term periods
 
