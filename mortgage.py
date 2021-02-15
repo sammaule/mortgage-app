@@ -283,7 +283,6 @@ def save_mortage_info(
         }
         if data is None:
             data = json.dumps([mortgage_data])
-            print(data)
             return data, True
         else:
             existing_data = json.loads(data)
@@ -292,7 +291,6 @@ def save_mortage_info(
                 existing_data.append(mortgage_data)
 
             existing_data = json.dumps(existing_data)
-            print(existing_data)
             return existing_data, True
 
 

@@ -278,7 +278,6 @@ def fill_dropdown_options(url, data):
             }
             for val, i in enumerate(data)
         ]
-        print(options)
         return options
     else:
         raise PreventUpdate
