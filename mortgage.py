@@ -250,14 +250,15 @@ def plot_monthly_repayments(
     [Output("data-store-mortgage", "data"), Output("mortgage-saved-popup", "is_open")],
     [
         Input("save-button-mortgage", "n_clicks"),
-        Input("deposit-size", "value"),
-        Input("purchase-price", "value"),
-        Input("mortgage-term", "value"),
-        Input("interest-rate", "value"),
-        Input("offer-term", "value"),
-        Input("initial-interest-rate", "value"),
+
     ],
-    [State("data-store-mortgage", "data")],
+    [State("deposit-size", "value"),
+        State("purchase-price", "value"),
+        State("mortgage-term", "value"),
+        State("interest-rate", "value"),
+        State("offer-term", "value"),
+        State("initial-interest-rate", "value"),
+        State("data-store-mortgage", "data")],
 )
 def save_mortage_info(
     n_clicks: Optional[int],
@@ -274,7 +275,7 @@ def save_mortage_info(
     else:
         mortgage_data = {
             "deposit": deposit,
-            "purchase_price": purchase_price,
+            "mortgage_size": purchase_price - deposit,
             "term": term,
             "interest_rate": interest_rate,
             "offer_term": offer_term,
@@ -282,6 +283,7 @@ def save_mortage_info(
         }
         if data is None:
             data = json.dumps([mortgage_data])
+            print(data)
             return data, True
         else:
             existing_data = json.loads(data)
@@ -290,6 +292,7 @@ def save_mortage_info(
                 existing_data.append(mortgage_data)
 
             existing_data = json.dumps(existing_data)
+            print(existing_data)
             return existing_data, True
 
 

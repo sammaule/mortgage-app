@@ -32,15 +32,10 @@ allocation_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Total wealth (£ ,000)"),
-                        dbc.Input(
-                            id="total-wealth-allocation",
-                            type="number",
-                            min=0,
-                            step=1,
-                            max=100000,
-                        ),
+                        dbc.Input(id="total-wealth-allocation", type="number", min=0, step=1, max=100000,),
                     ]
                 ),
+                dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
                 dbc.FormGroup(
                     [
                         dbc.Label("Property allocation"),
@@ -48,10 +43,7 @@ allocation_card = dbc.Card(
                     ]
                 ),
                 dbc.FormGroup(
-                    [
-                        dbc.Label("Cash allocation"),
-                        dcc.Slider(id="cash-allocation", min=0, step=1, value=0,),
-                    ]
+                    [dbc.Label("Cash allocation"), dcc.Slider(id="cash-allocation", min=0, step=1, value=0,),]
                 ),
                 dbc.FormGroup(
                     [
@@ -72,40 +64,19 @@ expected_annual_returns_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Property"),
-                        dbc.Input(
-                            id="property-r",
-                            type="number",
-                            min=0,
-                            step=0.1,
-                            max=1000,
-                            value=2.,
-                        ),
+                        dbc.Input(id="property-r", type="number", min=0, step=0.1, max=1000, value=2.0,),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Cash"),
-                        dbc.Input(
-                            id="cash-r",
-                            type="number",
-                            min=0,
-                            step=0.1,
-                            max=1000,
-                            value=0.5,
-                        ),
+                        dbc.Input(id="cash-r", type="number", min=0, step=0.1, max=1000, value=0.5,),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Securities"),
-                        dbc.Input(
-                            id="securities-r",
-                            type="number",
-                            min=0,
-                            step=0.1,
-                            max=1000,
-                            value=4.,
-                        ),
+                        dbc.Input(id="securities-r", type="number", min=0, step=0.1, max=1000, value=4.0,),
                     ]
                 ),
             ]
@@ -114,16 +85,13 @@ expected_annual_returns_card = dbc.Card(
 )
 
 chart_card = dbc.Card(
-    [
-        dbc.CardHeader("Asset value over time"),
-        dbc.CardBody([dcc.Graph(id="allocation-plot")]),
-    ]
+    [dbc.CardHeader("Asset value over time"), dbc.CardBody([dcc.Graph(id="allocation-plot")]),]
 )
 
 layout = html.Div(
     [
-        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6)]),
-        dbc.Row([dbc.Col(chart_card, width=12)])
+        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6),]),
+        dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
 
@@ -162,13 +130,7 @@ def update_sliders(
         securities_allocation: user allocation to securities (£ thousands)
     """
     if all(
-        v is not None
-        for v in [
-            total_wealth,
-            property_allocation,
-            cash_allocation,
-            securities_allocation,
-        ]
+        v is not None for v in [total_wealth, property_allocation, cash_allocation, securities_allocation,]
     ):
         # Get the maximum values for each slider
         max_property = total_wealth - (cash_allocation + securities_allocation)
@@ -178,18 +140,12 @@ def update_sliders(
         # Get the step sizes for the marks
         order_of_magnitude = math.floor(math.log10(total_wealth)) - 1
         multiple = int(str(total_wealth)[0]) * 10
-        step_size = (
-            int(multiple ** order_of_magnitude) if order_of_magnitude >= 0 else 1
-        )
+        step_size = int(multiple ** order_of_magnitude) if order_of_magnitude >= 0 else 1
 
         # Get a dictionary of markers in correct format
-        property_marks = {
-            i: f"{i: ,}" for i in range(0, max_property + step_size, step_size)
-        }
+        property_marks = {i: f"{i: ,}" for i in range(0, max_property + step_size, step_size)}
         cash_marks = {i: f"{i: ,}" for i in range(0, max_cash + step_size, step_size)}
-        securities_marks = {
-            i: f"{i: ,}" for i in range(0, max_securities + step_size, step_size)
-        }
+        securities_marks = {i: f"{i: ,}" for i in range(0, max_securities + step_size, step_size)}
 
         return (
             max_property,
@@ -204,9 +160,7 @@ def update_sliders(
 
 
 @app.callback(
-    Output("total-wealth-allocation", "value"),
-    [Input("url", "pathname")],
-    [State("data-store", "data")],
+    Output("total-wealth-allocation", "value"), [Input("url", "pathname")], [State("data-store", "data")],
 )
 def fill_wealth_value(url: str, data: str) -> int:
     """"
@@ -225,17 +179,21 @@ def fill_wealth_value(url: str, data: str) -> int:
     else:
         return 0
 
+
 @app.callback(
     Output("allocation-plot", "figure"),
-    [Input("cash-r", "value"),
-     Input("property-r", "value"),
-     Input("securities-r", "value"),
-     Input("cash-allocation", "value"),
-     Input("property-allocation", "value"),
-     Input("securities-allocation", "value"),
-     ],
+    [
+        Input("cash-r", "value"),
+        Input("property-r", "value"),
+        Input("securities-r", "value"),
+        Input("cash-allocation", "value"),
+        Input("property-allocation", "value"),
+        Input("securities-allocation", "value"),
+    ],
 )
-def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation):
+def update_plot(
+    cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation,
+):
 
     fig = go.Figure()
 
@@ -255,7 +213,7 @@ def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allo
             fillcolor="rgba(0,176,246,0.2)",
             line={"color": "black", "width": 0.8},
             name="Cash",
-            hovertemplate="Date: %{x} \nCash value: £%{y:,.3r}<extra></extra>"
+            hovertemplate="Date: %{x} \nCash value: £%{y:,.3r}<extra></extra>",
         )
     )
 
@@ -270,7 +228,7 @@ def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allo
             fillcolor="rgba(0,176,246,0.2)",
             line={"color": "red", "width": 0.8},
             name="Property",
-            hovertemplate="Date: %{x} \nProperty value: £%{y:,.3r}<extra></extra>"
+            hovertemplate="Date: %{x} \nProperty value: £%{y:,.3r}<extra></extra>",
         )
     )
 
@@ -285,7 +243,7 @@ def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allo
             fillcolor="rgba(0,176,246,0.2)",
             line={"color": "blue", "width": 0.8},
             name="Securities",
-            hovertemplate="Date: %{x} \nSecurities value: £%{y:,.3r}<extra></extra>"
+            hovertemplate="Date: %{x} \nSecurities value: £%{y:,.3r}<extra></extra>",
         )
     )
 
@@ -298,8 +256,44 @@ def update_plot(cash_r, property_r, securities_r, cash_allocation, property_allo
             fillcolor="rgba(0,176,246,0.2)",
             line={"color": "black", "width": 1.5},
             name="Total",
-            hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>"
+            hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
         )
     )
 
     return fig
+
+
+@app.callback(
+    Output("mortgage-dropdown", "options"),
+    [Input("url", "pathname")],
+    [State("data-store-mortgage", "data")],
+)
+def fill_dropdown_options(url, data):
+    if data:
+        data = json.loads(data)
+        options = [
+            {
+                "label": f"£{int(i.get('mortgage_size', 0)):,}k {i.get('term')}y, {i.get('offer_term')}y @{i.get('offer_rate')}% then {i.get('interest_rate')}%. £{int(i.get('deposit'))}k deposit",
+                "value": val,
+            }
+            for val, i in enumerate(data)
+        ]
+        print(options)
+        return options
+    else:
+        raise PreventUpdate
+
+
+@app.callback(
+    Output("property-allocation", "value"),
+    [Input("mortgage-dropdown", "value")],
+    [State("data-store-mortgage", "data")],
+)
+def update_property_allocation(dropdown_val, data):
+    if dropdown_val is not None:
+        data = json.loads(data)
+        selected_mortgage = data[dropdown_val]
+        deposit = int(selected_mortgage.get("deposit"))
+        return deposit
+    else:
+        raise PreventUpdate
