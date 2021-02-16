@@ -219,36 +219,27 @@ def plot_monthly_repayments(
         term *= 12
         offer_term *= 12
         remaining_term = term - offer_term
-        offer_per = np.arange(offer_term) + 1
-        remaining_per = np.arange(remaining_term) + 1
+        x = np.arange(term) + 1
 
-        # Compute initial monthly payment
-        offer_pmts = np.array([-1 * npf.pmt(offer_rate, term, total_borrowed)] * offer_term)
-        offer_ipmts = np.array([-1 * npf.ipmt(offer_rate, offer_per, term, total_borrowed)] * offer_term)
-        offer_ppmts = np.array([-1 * npf.ppmt(offer_rate, offer_per, term, total_borrowed)] * offer_term)
+        rate_array = np.append(np.array([offer_rate] * offer_term), np.array([interest_rate] * remaining_term))
 
-        # Compute later monthly payments
-        balance = compute_remaining_balance(total_borrowed, offer_rate, offer_term, term)
-        regular_pmts = np.array([-1 * npf.pmt(interest_rate, remaining_term, balance)] * remaining_term)
-        regular_ipmts = np.array([-1 * npf.ipmt(interest_rate, remaining_per, remaining_term, balance)] * remaining_term)
-        regular_ppmts = np.array([-1 * npf.ppmt(interest_rate, remaining_per, remaining_term, balance)] * remaining_term)
+        payments = -1 * npf.pmt(rate_array, term, total_borrowed)
+        interest_payments = -1 * npf.ipmt(rate_array, x, term, total_borrowed)
+        principal_payments = -1 * npf.ppmt(rate_array, x, term, total_borrowed)
 
-        # Generate plot data
-        x = np.array(range(1, term + 1))
-        y_i = np.append(offer_ipmts[0], regular_ipmts[0])
-        y_p = np.append(offer_ppmts[0], regular_ppmts[0])
+        assert np.allclose(payments, interest_payments + principal_payments)
 
         # Create figure dict
         figure = go.Figure(
             data=[
                 go.Bar(
                     x=x,
-                    y=y_i,
+                    y=interest_payments,
                     name="Interest payments",
                 ),
                 go.Bar(
                     x=x,
-                    y=y_p,
+                    y=principal_payments,
                     name="Principal payments",
                 ),
             ],
@@ -259,10 +250,10 @@ def plot_monthly_repayments(
         figure.update_yaxes(title_text="Total payment (£)")
 
         # Create strings for output
-        interest_paid = int(np.sum(y_i))
+        interest_paid = int(np.sum(interest_payments))
         interest_paid = f"£{interest_paid:,}"
-        offer_pmt = f"£{offer_pmts[0] :,.2f}"
-        regular_pmt = f"£{regular_pmts[0] :,.2f}"
+        offer_pmt = f"£{payments[0] :,.2f}"
+        regular_pmt = f"£{payments[-1] :,.2f}"
         return figure, interest_paid, offer_pmt, regular_pmt
     else:
         raise PreventUpdate
