@@ -1,12 +1,14 @@
 """Contains layout and callbacks for the mortgage page of the app."""
 import json
-from typing import Tuple, Union, Optional
+from typing import Tuple, Optional
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+import plotly.graph_objects as go
 import numpy as np
+import numpy_financial as npf
 from dash.exceptions import PreventUpdate
 
 from app import app
@@ -193,7 +195,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
 )
 def plot_monthly_repayments(
     deposit: int, purchase_price: int, term: int, interest_rate: float, offer_term: int, offer_rate: float,
-) -> Tuple[dict, str, str, str]:
+) -> Tuple[go.Figure, str, str, str]:
     """
     Callback to plot the payment schedule and populate the total interest repaid.
 
@@ -209,39 +211,59 @@ def plot_monthly_repayments(
 
     """
     if all(v is not None for v in [deposit, purchase_price, interest_rate, offer_term, offer_rate]):
+
+        # Convert inputs to correct units
         total_borrowed = (purchase_price - deposit) * 1000
+        offer_rate = (offer_rate / 12) / 100
+        interest_rate = (interest_rate / 12) / 100
+        term *= 12
+        offer_term *= 12
+        remaining_term = term - offer_term
+        offer_per = np.arange(offer_term) + 1
+        remaining_per = np.arange(remaining_term) + 1
 
         # Compute initial monthly payment
-        offer_m_payment = calc_monthly_payment(total_borrowed, offer_rate, term)
-        initial_payments = np.array([offer_m_payment] * offer_term * 12)
+        offer_pmts = np.array([-1 * npf.pmt(offer_rate, term, total_borrowed)] * offer_term)
+        offer_ipmts = np.array([-1 * npf.ipmt(offer_rate, offer_per, term, total_borrowed)] * offer_term)
+        offer_ppmts = np.array([-1 * npf.ppmt(offer_rate, offer_per, term, total_borrowed)] * offer_term)
 
-        # remaining balance on loan
+        # Compute later monthly payments
         balance = compute_remaining_balance(total_borrowed, offer_rate, offer_term, term)
-
-        # Compute monthly payment according to formula here:
-        remaining_term = term - offer_term
-        m_payment = calc_monthly_payment(balance, interest_rate, remaining_term)
-        later_payments = np.array([m_payment] * remaining_term * 12)
+        regular_pmts = np.array([-1 * npf.pmt(interest_rate, remaining_term, balance)] * remaining_term)
+        regular_ipmts = np.array([-1 * npf.ipmt(interest_rate, remaining_per, remaining_term, balance)] * remaining_term)
+        regular_ppmts = np.array([-1 * npf.ppmt(interest_rate, remaining_per, remaining_term, balance)] * remaining_term)
 
         # Generate plot data
-        x = np.array(range(1, term * 12 + 1))
-        y = np.append(initial_payments, later_payments)
+        x = np.array(range(1, term + 1))
+        y_i = np.append(offer_ipmts[0], regular_ipmts[0])
+        y_p = np.append(offer_ppmts[0], regular_ppmts[0])
 
         # Create figure dict
-        figure = {
-            "data": [{"x": x, "y": y, "type": "bar", }, ],
-            "layout": {
-                "xaxis": {"title": "Months"},
-                "yaxis": {"title": "Monthly payment (£)"},
-                "clickmode": "event+select",
-            },
-        }
+        figure = go.Figure(
+            data=[
+                go.Bar(
+                    x=x,
+                    y=y_i,
+                    name="Interest payments",
+                ),
+                go.Bar(
+                    x=x,
+                    y=y_p,
+                    name="Principal payments",
+                ),
+            ],
+
+        )
+        figure.update_layout(barmode="stack")
+        figure.update_xaxes(title_text="Months")
+        figure.update_yaxes(title_text="Total payment (£)")
+
         # Create strings for output
-        interest_paid = int(np.sum(y) - total_borrowed)
+        interest_paid = int(np.sum(y_i))
         interest_paid = f"£{interest_paid:,}"
-        offer_m_payment = f"£{offer_m_payment :,.2f}"
-        m_payment = f"£{m_payment :,.2f}"
-        return figure, interest_paid, offer_m_payment, m_payment
+        offer_pmt = f"£{offer_pmts[0] :,.2f}"
+        regular_pmt = f"£{regular_pmts[0] :,.2f}"
+        return figure, interest_paid, offer_pmt, regular_pmt
     else:
         raise PreventUpdate
 
@@ -309,25 +331,6 @@ def save_mortgage_info(
 
             existing_data = json.dumps(existing_data)
             return existing_data, True
-
-
-def calc_monthly_payment(total_borrowed: Union[int, float], r: float, term: int) -> float:
-    """
-    Function to compute monthly mortgage repayments.
-    https://en.wikipedia.org/wiki/Mortgage_calculator
-
-    Args:
-        total_borrowed: total amount borrowed
-        r: annual interest rate (%)
-        term: length of mortgage (years)
-    Returns:
-        monthly payment
-    """
-    # Convert from years to months
-    n_payments = term * 12
-    # Convert rate to decimal monthly
-    offer_r = (r / 12) / 100
-    return (total_borrowed * offer_r) / (1 - (1 + offer_r) ** -n_payments)
 
 
 def compute_remaining_balance(total_borrowed: int, r: float, offer_term: int, term: int) -> float:
