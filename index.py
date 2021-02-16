@@ -31,7 +31,16 @@ app.layout = html.Div([
 
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
-def display_page(pathname):
+def display_page(pathname: str) -> html.Div:
+    """
+    Determines which page layout to display.
+
+    Args:
+        pathname: url path
+
+    Returns:
+        page layout div
+    """
     if pathname == '/mortgage':
         return mortgage.layout
     elif pathname == '/budget':

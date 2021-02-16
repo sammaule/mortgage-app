@@ -1,7 +1,6 @@
 """Code for the budget page of the app."""
 import datetime
 import json
-import re
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -50,10 +49,7 @@ income_and_tax_card = dbc.Card(
         dbc.CardBody(
             [
                 dbc.FormGroup(
-                    [
-                        dbc.Label("Income (£ ,000)"),
-                        dbc.Input(id="income", value=60, type="number"),
-                    ]
+                    [dbc.Label("Income (£ ,000)"), dbc.Input(id="income", value=60, type="number"), ]
                 ),
                 dbc.FormGroup(
                     [
@@ -68,18 +64,18 @@ income_and_tax_card = dbc.Card(
                         ),
                     ]
                 ),
-                dbc.FormGroup([
-                    dbc.Label("Loan to income ratio"),
-                    dcc.Slider(
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Loan to income ratio"),
+                        dcc.Slider(
                             id="lti",
                             value=4,
                             marks={3: "3", 3.5: "3.5", 4: "4", 4.5: "4.5", 5: "5"},
                             step=0.1,
                             min=3,
                             max=5,
-                        )
-                ]
-
+                        ),
+                    ]
                 ),
                 dbc.FormGroup(
                     [
@@ -88,7 +84,7 @@ income_and_tax_card = dbc.Card(
                         html.Br(),
                         dcc.DatePickerSingle(
                             id="target-purchase-date",
-                            date=datetime.datetime.today() + datetime.timedelta(days=9*30),
+                            date=datetime.datetime.today().date() + datetime.timedelta(days=9 * 30),
                             min_date_allowed=datetime.datetime.today(),
                             display_format="DD/MM/YYYY",
                         ),
@@ -105,17 +101,10 @@ budget_results_card = dbc.Card(
         dbc.CardBody(
             [
                 html.Div(
-                    [
-                        dbc.Label("Maximum affordable value:"),
-                        html.H5(id="property-value-on-target-date"),
-                    ]
+                    [dbc.Label("Maximum affordable value:"), html.H5(id="property-value-on-target-date"), ]
                 ),
-                html.Div(
-                    [dbc.Label("Mortgage size:"), html.H5(id="mortgage-on-target-date")]
-                ),
+                html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-on-target-date")]),
                 html.Div([dbc.Label("Deposit size:"), html.H5(id="deposit-on-target-date")]),
-
-
                 html.Div([dbc.Label("Stamp duty payable:"), html.H5(id="stamp-duty-on-target-date")]),
             ]
         ),
@@ -131,7 +120,10 @@ layout = html.Div(
                 dbc.Col(
                     [
                         dbc.Card(
-                            [dbc.CardHeader("Affordability to target date"), dbc.CardBody(dcc.Graph(id="budget-plot")),]
+                            [
+                                dbc.CardHeader("Affordability to target date"),
+                                dbc.CardBody(dcc.Graph(id="budget-plot")),
+                            ]
                         )
                     ],
                     width=7,
@@ -166,18 +158,22 @@ def calc_ltv(
 ) -> Tuple[go.Figure, str, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
-    Assumes that all interest is paid monthly at a rate of 1/12*r and all reinvested.
+    Assumes that all interest is paid monthly at a rate of 1/12 * r and all reinvested.
 
     Args:
         savings: Total current savings
         saving_rate: Amount saved each month
         r: interest rate (%)
+        income: user input income (£ thousands)
+        stamp_duty_rate: one of ["higher_rate", "lower_rate"]
+        lti: loan to income ratio
+        target_date: purchase date with format YYYY-MM-DD
     """
     if all(v is not None for v in [savings, saving_rate, r]):
         fig = go.Figure()
 
-        start_date = datetime.datetime.today()
-        end_date = datetime.datetime.strptime(re.split("T| ", target_date)[0], "%Y-%m-%d")
+        start_date = datetime.datetime.today().date()
+        end_date = datetime.datetime.strptime(target_date, "%Y-%m-%d")
         periods = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
         x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
 
@@ -199,7 +195,7 @@ def calc_ltv(
                 y=budget,
                 fillcolor="rgba(0,176,246,0.2)",
                 line={"color": "black", "width": 0.8},
-                hovertemplate="Date: %{x} \nMax affordable: £%{y:,.3r}<extra></extra>"
+                hovertemplate="Date: %{x} \nMax affordable: £%{y:,.3r}<extra></extra>",
             )
         )
 
@@ -212,7 +208,9 @@ def calc_ltv(
         savings_on_target_date = npf.fv((r / 100) / 12, num_months, -saving_rate, -(savings * 1000))
 
         # Work out deposit, stamp duty and max affordable price for each mortgage size
-        deposit, property_value, stamp_duty = iterative_p(savings_on_target_date, mortgage, stamp_duty_payable, higher_rate)
+        deposit, property_value, stamp_duty = iterative_p(
+            savings_on_target_date, mortgage, stamp_duty_payable, higher_rate
+        )
 
         deposit_on_target_date_str = f"£{int(deposit): ,}"
         mortgage_on_target_date_str = f"£{int(mortgage): ,}"
@@ -246,11 +244,11 @@ def stamp_duty_payable(price: int, higher_rate: bool) -> float:
     Computes the stamp duty payable where property costs price.
 
     Args:
-        price (int): price of property
-        higher_rate (bool): True if higher rate of stamp duty is payable
+        price: price of property
+        higher_rate: True if higher rate of stamp duty is payable
 
     Returns:
-        (int) total stamp duty payable
+        total stamp duty payable
     """
     lease_premiums = [125000, 125000, 675000, 575000, np.inf]
     rates = [0, 0.02, 0.05, 0.10, 0.12]
@@ -267,26 +265,26 @@ def stamp_duty_payable(price: int, higher_rate: bool) -> float:
     return payable
 
 
-def iterative_p(s, m, stamp_duty_payable, higher_rate):
+def iterative_p(s, m, stamp_duty_payable_fn, higher_rate):
     """
     Iteratively works out the maximum price affordable inclusive of stamp duty.
 
     Args:
         s: total savings
-        m: mortage size available
-        stamp_duty_payable: function to compute stamp_duty
+        m: mortgage size available
+        stamp_duty_payable_fn: function to compute stamp_duty
         higher_rate: bool to indicate which stamp duty is payable
 
     Returns:
         deposit size, maximum price, stamp duty payable
     """
-    old_sd, sd = 0, 100
+    old_sd, sd, p = 0, 100, 0
     while abs(old_sd - sd) > 0.01:
         p = s - old_sd + m
-        sd = stamp_duty_payable(p, higher_rate)
+        sd = stamp_duty_payable_fn(p, higher_rate)
         new_p = s - sd + m
         old_sd = sd
-        sd = stamp_duty_payable(new_p, higher_rate)
+        sd = stamp_duty_payable_fn(new_p, higher_rate)
 
     deposit = s - sd
     return deposit, p, sd

@@ -2,7 +2,7 @@
 import datetime
 import json
 import math
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Union, List
 
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -167,6 +167,7 @@ def fill_wealth_value(url: str, data: str) -> int:
     Returns the total savings value defined by user on budget page, rounded to the nearest thousand.
 
     Args:
+        url: change in url triggers callback
         data: json string
 
     Returns:
@@ -233,7 +234,7 @@ def update_plot(
     )
 
     securities_array = np.array(
-        [npf.fv((cash_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(periods)]
+        [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(periods)]
     )
 
     fig.add_trace(
@@ -268,12 +269,25 @@ def update_plot(
     [Input("url", "pathname")],
     [State("data-store-mortgage", "data")],
 )
-def fill_dropdown_options(url, data):
+def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]]]:
+    """
+    Fills the mortgage dropdown menu to allow users to select from mortgages saved on the mortgage
+    page.
+
+    Args:
+        url: change in url triggers callback
+        data: JSON str of saved mortgages
+
+    Returns:
+        dcc.Dropdown options
+    """
     if data:
         data = json.loads(data)
         options = [
             {
-                "label": f"£{int(i.get('mortgage_size', 0)):,}k {i.get('term')}y, {i.get('offer_term')}y @{i.get('offer_rate')}% then {i.get('interest_rate')}%. £{int(i.get('deposit'))}k deposit",
+                "label": f"£{int(i.get('mortgage_size', 0)):,}k {i.get('term')}y, "
+                         f"{i.get('offer_term')}y @{i.get('offer_rate')}% "
+                         f"then {i.get('interest_rate')}%. £{int(i.get('deposit'))}k deposit",
                 "value": val,
             }
             for val, i in enumerate(data)
@@ -288,7 +302,17 @@ def fill_dropdown_options(url, data):
     [Input("mortgage-dropdown", "value")],
     [State("data-store-mortgage", "data")],
 )
-def update_property_allocation(dropdown_val, data):
+def update_property_allocation(dropdown_val: int, data: str) -> int:
+    """
+    Updates the property allocation to the value of the mortgage deposit selected.
+
+    Args:
+        dropdown_val: index of selected mortgage in data
+        data: JSON str of saved mortgages
+
+    Returns:
+        deposit size allocated to property
+    """
     if dropdown_val is not None:
         data = json.loads(data)
         selected_mortgage = data[dropdown_val]

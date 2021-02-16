@@ -1,4 +1,4 @@
-""""""
+"""Contains layout and callbacks for the mortgage page of the app."""
 import json
 from typing import Tuple, Union, Optional
 
@@ -18,10 +18,10 @@ first_card = dbc.Card(
         dbc.CardBody(
             [
                 dbc.FormGroup(
-                    [dbc.Label("Deposit size (£ ,000)"), dbc.Input(id="deposit-size", type="number"),]
+                    [dbc.Label("Deposit size (£ ,000)"), dbc.Input(id="deposit-size", type="number"), ]
                 ),
                 dbc.FormGroup(
-                    [dbc.Label("Purchase price (£ ,000)"), dbc.Input(id="purchase-price", type="number"),]
+                    [dbc.Label("Purchase price (£ ,000)"), dbc.Input(id="purchase-price", type="number"), ]
                 ),
                 dbc.FormGroup(
                     [
@@ -78,7 +78,7 @@ second_card = dbc.Card(
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
                 html.Div([dbc.Label("LTI:"), html.H5(id="lti-mortgage")]),
                 html.Div(
-                    [dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer"),]
+                    [dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer"), ]
                 ),
                 html.Div([dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]),
                 html.Br(),
@@ -121,18 +121,21 @@ layout = html.Div(
 
 
 @app.callback(
-    [Output("deposit-size", "value"), Output("purchase-price", "value"),],
+    [Output("deposit-size", "value"), Output("purchase-price", "value"), ],
     [Input("url", "pathname")],
     [State("data-store", "data")],
 )
-def fill_data_values(url, data):
+def fill_data_values(url, data) -> Tuple[float, float]:
     """
+    Fills deposit and property value data input in budget page.
 
     Args:
-        data (str): json string
+        url: callback triggered by change in url
+        data: json string
 
     Returns:
-        deposit size, purchase price and income (Tuple[float, float, float])
+        deposit size
+        purchase price
     """
     if data:
         data = json.loads(data)
@@ -146,16 +149,19 @@ def fill_data_values(url, data):
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
     [State("data-store", "data")],
 )
-def calc_ltv(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
+def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, str]:
     """
-    Returns LTV of mortgage.
+    Calculates LTI, LTV and mortgage size based on input price, deposit and income data.
 
     Args:
-        deposit (int):  deposit size (£k)
-        price (int): price (£k)
+        deposit:  deposit size (£k)
+        price: price (£k)
+        data: JSON str of stored data from budget page
 
     Returns:
-        (str) : LTV for display in div
+        LTV str
+        LTI str
+        mortgage size str
     """
     if all(v is not None for v in [deposit, price]):
         data = json.loads(data)
@@ -192,12 +198,12 @@ def plot_monthly_repayments(
     Callback to plot the payment schedule and populate the total interest repaid.
 
     Args:
-        deposit (int): deposit amount (£k)
-        purchase_price (int): price (£k)
-        term (int): mortgage length (years)
-        interest_rate (float): interest rate (% annual)
-        offer_term (int): length of introductory offer (years)
-        offer_rate (float): interest rate during offer period (% annual)
+        deposit: deposit amount (£k)
+        purchase_price: price (£k)
+        term: mortgage length (years)
+        interest_rate: interest rate (% annual)
+        offer_term: length of introductory offer (years)
+        offer_rate: interest rate during offer period (% annual)
 
     Returns:
 
@@ -223,7 +229,7 @@ def plot_monthly_repayments(
 
         # Create figure dict
         figure = {
-            "data": [{"x": x, "y": y, "type": "bar",},],
+            "data": [{"x": x, "y": y, "type": "bar", }, ],
             "layout": {
                 "xaxis": {"title": "Months"},
                 "yaxis": {"title": "Monthly payment (£)"},
@@ -240,27 +246,20 @@ def plot_monthly_repayments(
         raise PreventUpdate
 
 
-# TODO: Add callback that:
-#               a) stores mortgage information in memory when save mortgage button clicked and
-#               b) brings up pop up window to say that the mortgage info was saved and can be used on the asset
-#                  allocation page.
-
-
 @app.callback(
     [Output("data-store-mortgage", "data"), Output("mortgage-saved-popup", "is_open")],
+    [Input("save-button-mortgage", "n_clicks"), ],
     [
-        Input("save-button-mortgage", "n_clicks"),
-
-    ],
-    [State("deposit-size", "value"),
+        State("deposit-size", "value"),
         State("purchase-price", "value"),
         State("mortgage-term", "value"),
         State("interest-rate", "value"),
         State("offer-term", "value"),
         State("initial-interest-rate", "value"),
-        State("data-store-mortgage", "data")],
+        State("data-store-mortgage", "data"),
+    ],
 )
-def save_mortage_info(
+def save_mortgage_info(
     n_clicks: Optional[int],
     deposit: int,
     purchase_price: int,
@@ -269,7 +268,25 @@ def save_mortage_info(
     offer_term: int,
     offer_rate: float,
     data: Optional[str],
-):
+) -> Tuple[str, bool]:
+    """
+    Callback that stores the mortgage data displayed on page to the data-store-mortgage session memory on
+    click of save-button-mortgage. Opens modal window to confirm data saved.
+
+    Args:
+        n_clicks: number of times button clicked. None if not clicked.
+        deposit: mortgage deposit size (£ thousands)
+        purchase_price: house price (£ thousands)
+        term: mortgage length (years)
+        interest_rate: mortgage interest rate after offer period
+        offer_term: mortgage offer term (years)
+        offer_rate: mortgage offer rate
+        data: JSON str of data-store-mortgage session memory
+
+    Returns:
+        JSON str of data-store-mortgage session memory
+        bool to determine if mortgage-saved-popup window is open
+    """
     if n_clicks is None:
         raise PreventUpdate
     else:
@@ -300,11 +317,11 @@ def calc_monthly_payment(total_borrowed: Union[int, float], r: float, term: int)
     https://en.wikipedia.org/wiki/Mortgage_calculator
 
     Args:
-        total_borrowed (int): total amount borrowed
-        r (float): annual interest rate (%)
-        term (int): length of mortgage (years)
+        total_borrowed: total amount borrowed
+        r: annual interest rate (%)
+        term: length of mortgage (years)
     Returns:
-        (float) : monthly payment
+        monthly payment
     """
     # Convert from years to months
     n_payments = term * 12
@@ -318,13 +335,13 @@ def compute_remaining_balance(total_borrowed: int, r: float, offer_term: int, te
     Computes remaining balance left on loan after end of offer_term periods
 
     Args:
-        total_borrowed (int): total amount initially borrowed
-        r (float): interest rate paid (%)
-        offer_term (int): length of offer period
-        term (int): total length of loan
+        total_borrowed: total amount initially borrowed
+        r: interest rate paid (%)
+        offer_term: length of offer period
+        term: total length of loan
 
     Returns:
-        (float) : remaining balance on loan
+        remaining balance on loan
     """
     # Formula from https://www.mtgprofessor.com/formulas.htm
     # Convert to decimal monthly interest rate
