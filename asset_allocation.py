@@ -16,6 +16,8 @@ import numpy_financial as npf
 
 from app import app
 
+# TODO: Update to be consistent with household balance sheet on paper
+
 allocation_card = dbc.Card(
     [
         dbc.CardHeader("Asset allocation"),
