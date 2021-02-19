@@ -214,9 +214,9 @@ def plot_monthly_repayments(
 
         # Convert inputs to correct units
         total_borrowed = (purchase_price - deposit) * 1000
-        offer_rate = (offer_rate / 12) / 100
+        offer_rate = (offer_rate / 12) / 100  # monthly interest rate
         interest_rate = (interest_rate / 12) / 100
-        term *= 12
+        term *= 12  # months
         offer_term *= 12
         remaining_term = term - offer_term
         x = np.arange(term) + 1

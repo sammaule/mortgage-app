@@ -16,14 +16,6 @@ import numpy_financial as npf
 
 from app import app
 
-# TODO: Add boxes for user to fill out the cost / return profiles of each type of investment.
-#       a) housing costs: mortgage, one off (tax etc.), upkeep, bills
-#          housing returns: house price growth, rent
-#       b) cash costs: bank fees?
-#          cash returns: interest rate
-#       c) securities costs: fees
-#          securities returns: expected annual returns
-
 allocation_card = dbc.Card(
     [
         dbc.CardHeader("Asset allocation"),
@@ -56,31 +48,87 @@ allocation_card = dbc.Card(
     ]
 )
 
-expected_annual_returns_card = dbc.Card(
+income_card = dbc.Card(
     [
-        dbc.CardHeader("Expected asset price growth (% annual)"),
+        dbc.CardHeader("Income"),
         dbc.CardBody(
             [
                 dbc.FormGroup(
                     [
-                        dbc.Label("Property"),
+                        dbc.Label("Property (% annual)"),
                         dbc.Input(id="property-r", type="number", min=0, step=0.1, max=1000, value=2.0,),
                     ]
                 ),
                 dbc.FormGroup(
                     [
-                        dbc.Label("Cash"),
+                        dbc.Label("Cash (% annual)"),
                         dbc.Input(id="cash-r", type="number", min=0, step=0.1, max=1000, value=0.5,),
                     ]
                 ),
                 dbc.FormGroup(
                     [
-                        dbc.Label("Securities"),
+                        dbc.Label("Securities (% annual)"),
                         dbc.Input(id="securities-r", type="number", min=0, step=0.1, max=1000, value=4.0,),
                     ]
                 ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Rental income (monthly)"),
+                        dbc.Input(id="rental-income", type="number", min=0, step=1, max=10000, value=0,),
+                    ]
+
+                )
             ]
         ),
+    ]
+)
+
+one_off_costs_card = dbc.Card(
+    [
+        dbc.CardHeader("One off costs"),
+        dbc.CardBody([
+            dbc.FormGroup(
+                    [
+                        dbc.Label("Mortgage fees"),
+                        dbc.Input(id="mortgage-fees-cost", type="number", min=0, step=10, max=10000, value=0,),
+                    ]
+                ),
+            dbc.FormGroup(
+                [
+                    dbc.Label("Stamp duty"),
+                    dbc.Input(id="stamp-duty-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                ]
+            ),
+            ]
+
+        )
+    ]
+)
+
+monthly_costs_card = dbc.Card(
+    [
+        dbc.CardHeader("Monthly costs"),
+        dbc.CardBody([
+            dbc.FormGroup(
+                    [
+                        dbc.Label("Rent"),
+                        dbc.Input(id="rent-cost", type="number", min=0, step=10, max=10000, value=0,),
+                    ]
+                ),
+            dbc.FormGroup(
+                [
+                    dbc.Label("Housing upkeep"),
+                    dbc.Input(id="housing-upkeep-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                ]
+            ),
+            dbc.FormGroup(
+                [
+                    dbc.Label("Bills"),
+                    dbc.Input(id="bills-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                ]
+            ),
+            ]
+        )
     ]
 )
 
@@ -90,7 +138,8 @@ chart_card = dbc.Card(
 
 layout = html.Div(
     [
-        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(expected_annual_returns_card, width=6),]),
+        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(income_card, width=6), ]),
+        dbc.Row([dbc.Col(one_off_costs_card, width=6), dbc.Col(monthly_costs_card, width=6), ]),
         dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
