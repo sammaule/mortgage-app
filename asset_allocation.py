@@ -18,9 +18,9 @@ from app import app
 
 # TODO: Update to be consistent with household balance sheet on paper
 
-allocation_card = dbc.Card(
+asset_card = dbc.Card(
     [
-        dbc.CardHeader("Asset allocation"),
+        dbc.CardHeader("Assets"),
         dbc.CardBody(
             [
                 dbc.FormGroup(
@@ -29,11 +29,11 @@ allocation_card = dbc.Card(
                         dbc.Input(id="total-wealth-allocation", type="number", min=0, step=1, max=100000,),
                     ]
                 ),
-                dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
                 dbc.FormGroup(
                     [
                         dbc.Label("Property allocation"),
-                        dcc.Slider(id="property-allocation", min=0, step=1, value=0,),
+                        # TODO: update so just text updated on selection of mortgage
+                        dcc.Slider(id="property-allocation", min=0, step=1, value=0, ),
                     ]
                 ),
                 dbc.FormGroup(
@@ -47,6 +47,18 @@ allocation_card = dbc.Card(
                 ),
             ]
         ),
+    ]
+)
+
+liability_card = dbc.Card(
+    [
+        dbc.CardHeader("Liabilities"),
+        dbc.CardBody(
+            [
+                dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
+
+            ]
+        )
     ]
 )
 
@@ -85,47 +97,38 @@ income_card = dbc.Card(
     ]
 )
 
-one_off_costs_card = dbc.Card(
-    [
-        dbc.CardHeader("One off costs"),
-        dbc.CardBody([
-            dbc.FormGroup(
-                    [
-                        dbc.Label("Mortgage fees"),
-                        dbc.Input(id="mortgage-fees-cost", type="number", min=0, step=10, max=10000, value=0,),
-                    ]
-                ),
-            dbc.FormGroup(
-                [
-                    dbc.Label("Stamp duty"),
-                    dbc.Input(id="stamp-duty-cost", type="number", min=0, step=10, max=10000, value=0, ),
-                ]
-            ),
-            ]
-
-        )
-    ]
-)
 
 monthly_costs_card = dbc.Card(
     [
         dbc.CardHeader("Monthly costs"),
         dbc.CardBody([
             dbc.FormGroup(
+                [
+                    dbc.Label("Mortgage fees"),
+                    dbc.Input(id="mortgage-fees-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                ]
+            ),
+            dbc.FormGroup(
+                [
+                    dbc.Label("Stamp duty"),
+                    dbc.Input(id="stamp-duty-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                ]
+            ),
+            dbc.FormGroup(
                     [
-                        dbc.Label("Rent"),
+                        dbc.Label("Rent (monthly)"),
                         dbc.Input(id="rent-cost", type="number", min=0, step=10, max=10000, value=0,),
                     ]
                 ),
             dbc.FormGroup(
                 [
-                    dbc.Label("Housing upkeep"),
+                    dbc.Label("Housing upkeep (monthly)"),
                     dbc.Input(id="housing-upkeep-cost", type="number", min=0, step=10, max=10000, value=0, ),
                 ]
             ),
             dbc.FormGroup(
                 [
-                    dbc.Label("Bills"),
+                    dbc.Label("Bills (monthly)"),
                     dbc.Input(id="bills-cost", type="number", min=0, step=10, max=10000, value=0, ),
                 ]
             ),
@@ -140,8 +143,8 @@ chart_card = dbc.Card(
 
 layout = html.Div(
     [
-        dbc.Row([dbc.Col(allocation_card, width=6), dbc.Col(income_card, width=6), ]),
-        dbc.Row([dbc.Col(one_off_costs_card, width=6), dbc.Col(monthly_costs_card, width=6), ]),
+        dbc.Row([dbc.Col(asset_card, width=6), dbc.Col(liability_card, width=6), ]),
+        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(monthly_costs_card, width=6), ]),
         dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
@@ -241,15 +244,18 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("cash-allocation", "value"),
         Input("property-allocation", "value"),
         Input("securities-allocation", "value"),
+        Input("mortgage-dropdown", "value")
     ],
+    [State("data-store-mortgage", "data")],
 )
 def update_plot(
-    cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation,
+    cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation, mortgage_idx, mortgage_data
 ):
 
     fig = go.Figure()
 
     start_date = datetime.datetime.today()
+    # TODO: Update end date to life time of mortgage
     end_date = start_date + datetime.timedelta(days=10 * 365)
     periods = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
     x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
@@ -311,6 +317,41 @@ def update_plot(
             hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
         )
     )
+
+    if mortgage_idx is not None:
+        data = json.loads(mortgage_data)
+        selected_mortgage = data[mortgage_idx]
+
+        mortgage_size = int(selected_mortgage.get("mortgage_size")) * 1000
+        offer_term = selected_mortgage.get("offer_term") * 12
+        term = selected_mortgage.get("term") * 12
+        remaining_term = term - offer_term
+
+        interest_rate = (selected_mortgage.get("interest_rate") / 12) / 100
+        offer_rate = (selected_mortgage.get("offer_rate") / 12) / 100  # monthly interest rate
+
+        per = np.arange(term) + 1
+        offer_principal_payments = (-1 * npf.ppmt(offer_rate, per, term, mortgage_size))[:offer_term]
+
+        balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
+
+        per = np.arange(remaining_term) + 1
+        remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
+
+        principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
+
+        outstanding_balance = mortgage_size - np.cumsum(principal_payments)
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=outstanding_balance,
+                fillcolor="rgba(0,176,246,0.2)",
+                line={"color": "black", "width": 1},
+                name="Liabilities",
+                hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
+            )
+        )
 
     return fig
 
