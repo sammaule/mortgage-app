@@ -221,13 +221,21 @@ def plot_monthly_repayments(
         remaining_term = term - offer_term
         x = np.arange(term) + 1
 
-        rate_array = np.append(np.array([offer_rate] * offer_term), np.array([interest_rate] * remaining_term))
+        offer_payments = -1 * npf.pmt(offer_rate, term, total_borrowed)
+        offer_interest_payments = (-1 * npf.ipmt(offer_rate, x, term, total_borrowed))[:offer_term]
+        offer_principal_payments = (-1 * npf.ppmt(offer_rate, x, term, total_borrowed))[:offer_term]
 
-        payments = -1 * npf.pmt(rate_array, term, total_borrowed)
-        interest_payments = -1 * npf.ipmt(rate_array, x, term, total_borrowed)
-        principal_payments = -1 * npf.ppmt(rate_array, x, term, total_borrowed)
+        balance_after_offer = total_borrowed - np.sum(offer_principal_payments)
 
-        assert np.allclose(payments, interest_payments + principal_payments)
+        per = np.arange(remaining_term) + 1
+        remaining_payments = -1 * npf.pmt(interest_rate, remaining_term, balance_after_offer)
+        remaining_interest_payments = -1 * npf.ipmt(interest_rate, per, remaining_term, balance_after_offer)
+        remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
+
+        interest_payments = np.append(offer_interest_payments, remaining_interest_payments)
+        principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
+
+        assert np.isclose(np.sum(principal_payments), total_borrowed)
 
         # Create figure dict
         figure = go.Figure(
@@ -252,8 +260,8 @@ def plot_monthly_repayments(
         # Create strings for output
         interest_paid = int(np.sum(interest_payments))
         interest_paid = f"£{interest_paid:,}"
-        offer_pmt = f"£{payments[0] :,.2f}"
-        regular_pmt = f"£{payments[-1] :,.2f}"
+        offer_pmt = f"£{offer_payments :,.2f}"
+        regular_pmt = f"£{remaining_payments :,.2f}"
         return figure, interest_paid, offer_pmt, regular_pmt
     else:
         raise PreventUpdate
@@ -322,30 +330,3 @@ def save_mortgage_info(
 
             existing_data = json.dumps(existing_data)
             return existing_data, True
-
-
-def compute_remaining_balance(total_borrowed: int, r: float, offer_term: int, term: int) -> float:
-    """
-    Computes remaining balance left on loan after end of offer_term periods
-
-    Args:
-        total_borrowed: total amount initially borrowed
-        r: interest rate paid (%)
-        offer_term: length of offer period
-        term: total length of loan
-
-    Returns:
-        remaining balance on loan
-    """
-    # Formula from https://www.mtgprofessor.com/formulas.htm
-    # Convert to decimal monthly interest rate
-    offer_r = (r / 12) / 100
-    # Convert from years to months
-    offer_months = offer_term * 12
-    n_payments = term * 12
-    # Compute remaining balance
-    return (
-        total_borrowed
-        * ((1 + offer_r) ** n_payments - (1 + offer_r) ** offer_months)
-        / ((1 + offer_r) ** n_payments - 1)
-    )
