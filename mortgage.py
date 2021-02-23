@@ -314,6 +314,7 @@ def save_mortgage_info(
         mortgage_data = {
             "deposit": deposit,
             "mortgage_size": purchase_price - deposit,
+            "purchase_price": purchase_price,
             "term": term,
             "interest_rate": interest_rate,
             "offer_term": offer_term,

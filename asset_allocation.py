@@ -251,17 +251,37 @@ def fill_wealth_value(url: str, data: str) -> int:
 def update_plot(
     cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation, mortgage_idx, mortgage_data
 ):
+    # Will only show plot if a mortgage has been selected
+    if mortgage_idx is None:
+        raise PreventUpdate
+
+    data = json.loads(mortgage_data)
+    mortgage = data[mortgage_idx]
+
+    # Set date range to mortgage term
+    term = mortgage.get("term") * 12
+    x = pd.date_range(datetime.datetime.now(), periods=term, freq="M")
 
     fig = go.Figure()
 
-    start_date = datetime.datetime.today()
-    # TODO: Update end date to life time of mortgage
-    end_date = start_date + datetime.timedelta(days=10 * 365)
-    periods = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
-    x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
+    # 1. Liabilities
+    mortgage_balance = _get_mortgage_balance(mortgage)
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=mortgage_balance,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "red", "width": 1.5},
+            name="Liabilities",
+            hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
+        )
+    )
+
+    # 2. Assets
 
     cash_array = np.array(
-        [npf.fv((cash_r / 100) / 12, i, 0, -(cash_allocation * 1000)) for i in range(periods)]
+        [npf.fv((cash_r / 100) / 12, i, 0, -(cash_allocation * 1000)) for i in range(term)]
     )
 
     fig.add_trace(
@@ -269,14 +289,15 @@ def update_plot(
             x=x,
             y=cash_array,
             fillcolor="rgba(0,176,246,0.2)",
-            line={"color": "black", "width": 0.8},
+            line={"color": "green", "width": 0.8},
             name="Cash",
             hovertemplate="Date: %{x} \nCash value: £%{y:,.3r}<extra></extra>",
         )
     )
 
+    purchase_price = mortgage.get("purchase_price")
     property_array = np.array(
-        [npf.fv((property_r / 100) / 12, i, 0, -(property_allocation * 1000)) for i in range(periods)]
+        [npf.fv((property_r / 100) / 12, i, 0, -(purchase_price * 1000)) for i in range(term)]
     )
 
     fig.add_trace(
@@ -284,14 +305,14 @@ def update_plot(
             x=x,
             y=property_array,
             fillcolor="rgba(0,176,246,0.2)",
-            line={"color": "red", "width": 0.8},
+            line={"color": "orange", "width": 0.8},
             name="Property",
             hovertemplate="Date: %{x} \nProperty value: £%{y:,.3r}<extra></extra>",
         )
     )
 
     securities_array = np.array(
-        [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(periods)]
+        [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(term)]
     )
 
     fig.add_trace(
@@ -299,7 +320,7 @@ def update_plot(
             x=x,
             y=securities_array,
             fillcolor="rgba(0,176,246,0.2)",
-            line={"color": "blue", "width": 0.8},
+            line={"color": "purple", "width": 0.8},
             name="Securities",
             hovertemplate="Date: %{x} \nSecurities value: £%{y:,.3r}<extra></extra>",
         )
@@ -312,47 +333,24 @@ def update_plot(
             x=x,
             y=total_array,
             fillcolor="rgba(0,176,246,0.2)",
-            line={"color": "black", "width": 1.5},
-            name="Total",
+            line={"color": "green", "width": 1.5},
+            name="Total assets",
             hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
         )
     )
 
-    if mortgage_idx is not None:
-        data = json.loads(mortgage_data)
-        selected_mortgage = data[mortgage_idx]
+    wealth = total_array - mortgage_balance
 
-        mortgage_size = int(selected_mortgage.get("mortgage_size")) * 1000
-        offer_term = selected_mortgage.get("offer_term") * 12
-        term = selected_mortgage.get("term") * 12
-        remaining_term = term - offer_term
-
-        interest_rate = (selected_mortgage.get("interest_rate") / 12) / 100
-        offer_rate = (selected_mortgage.get("offer_rate") / 12) / 100  # monthly interest rate
-
-        per = np.arange(term) + 1
-        offer_principal_payments = (-1 * npf.ppmt(offer_rate, per, term, mortgage_size))[:offer_term]
-
-        balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
-
-        per = np.arange(remaining_term) + 1
-        remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
-
-        principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
-
-        outstanding_balance = mortgage_size - np.cumsum(principal_payments)
-
-        fig.add_trace(
-            go.Scatter(
-                x=x,
-                y=outstanding_balance,
-                fillcolor="rgba(0,176,246,0.2)",
-                line={"color": "black", "width": 1},
-                name="Liabilities",
-                hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
-            )
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=wealth,
+            fillcolor="rgba(0,176,246,0.2)",
+            line={"color": "black", "width": 2},
+            name="Wealth",
+            hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
         )
-
+    )
     return fig
 
 
@@ -412,3 +410,29 @@ def update_property_allocation(dropdown_val: int, data: str) -> int:
         return deposit
     else:
         raise PreventUpdate
+
+
+def _get_mortgage_balance(mortgage):
+
+    mortgage_size = int(mortgage.get("mortgage_size")) * 1000
+    term = mortgage.get("term") * 12
+    offer_term = mortgage.get("offer_term") * 12
+
+    remaining_term = term - offer_term
+
+    interest_rate = (mortgage.get("interest_rate") / 12) / 100
+    offer_rate = (mortgage.get("offer_rate") / 12) / 100  # monthly interest rate
+
+    per = np.arange(term) + 1
+    offer_principal_payments = (-1 * npf.ppmt(offer_rate, per, term, mortgage_size))[:offer_term]
+
+    balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
+
+    per = np.arange(remaining_term) + 1
+    remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
+
+    principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
+
+    outstanding_balance = mortgage_size - np.cumsum(principal_payments)
+
+    return outstanding_balance
