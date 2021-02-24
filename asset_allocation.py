@@ -111,7 +111,7 @@ monthly_costs_card = dbc.Card(
             dbc.FormGroup(
                 [
                     dbc.Label("Stamp duty"),
-                    dbc.Input(id="stamp-duty-cost", type="number", min=0, step=10, max=10000, value=0, ),
+                    dbc.Input(id="stamp-duty-cost", type="number", min=0, step=100, value=0, ),
                 ]
             ),
             dbc.FormGroup(
@@ -242,14 +242,15 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("property-r", "value"),
         Input("securities-r", "value"),
         Input("cash-allocation", "value"),
-        Input("property-allocation", "value"),
         Input("securities-allocation", "value"),
-        Input("mortgage-dropdown", "value")
+        Input("mortgage-dropdown", "value"),
+        Input("stamp-duty-cost", "value"),
     ],
     [State("data-store-mortgage", "data")],
 )
 def update_plot(
-    cash_r, property_r, securities_r, cash_allocation, property_allocation, securities_allocation, mortgage_idx, mortgage_data
+    cash_r, property_r, securities_r, cash_allocation, securities_allocation, mortgage_idx,
+        stamp_duty, mortgage_data
 ):
     # Will only show plot if a mortgage has been selected
     if mortgage_idx is None:
@@ -339,6 +340,22 @@ def update_plot(
         )
     )
 
+    # 3. Income
+
+    # 4. Expenditure
+
+    # Stamp duty one off cost in period one
+    stamp_duty_exp = np.append(np.array([-stamp_duty]), np.zeros(len(x) - 1))
+
+    fig.add_trace(
+        go.Bar(
+            x=x,
+            y=stamp_duty_exp,
+            name="Stamp duty"
+        )
+    )
+    # 5. Wealth
+
     wealth = total_array - mortgage_balance
 
     fig.add_trace(
@@ -412,6 +429,7 @@ def update_property_allocation(dropdown_val: int, data: str) -> int:
         raise PreventUpdate
 
 
+# TODO: Tidy function, add docstring etc.
 def _get_mortgage_balance(mortgage):
 
     mortgage_size = int(mortgage.get("mortgage_size")) * 1000
