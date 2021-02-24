@@ -9,13 +9,15 @@ import budget
 import mortgage
 import asset_allocation
 
+# TODO: Update icon
+
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Budget", href="/budget")),
         dbc.NavItem(dbc.NavLink("Mortgage", href="/mortgage")),
         dbc.NavItem(dbc.NavLink("Asset Allocation", href="/asset_allocation"))
     ],
-    brand="Mortgage app",
+    brand="Pland",
     brand_href="/",
 )
 
