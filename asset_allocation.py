@@ -17,7 +17,8 @@ import numpy_financial as npf
 from app import app
 from budget import stamp_duty_payable
 
-# TODO: Update to be consistent with household balance sheet on paper
+# TODO: Add some tooltips to explain underlying assumptions / data etc.
+# TODO: Add option to save scenario and add a page that shows the various scenarios in a data table
 
 asset_card = dbc.Card(
     [
@@ -172,7 +173,7 @@ def update_sliders(
     total_wealth: Optional[int],
     cash_allocation: Optional[int],
     securities_allocation: Optional[int],
-    stamp_duty_payable: int,
+    stamp_duty: int,
     mortgage_fees: int,
     mortgage_idx: int,
     mortgage_data: str,
@@ -183,6 +184,10 @@ def update_sliders(
     Updates only if all input values are defined.
 
     Args:
+        mortgage_data: JSON str of saved mortgages
+        mortgage_idx: index of selected mortgage
+        mortgage_fees: total mortgage fees (£)
+        stamp_duty: amount of stamp duty payable for selected mortgage  (£)
         total_wealth: total wealth (£ thousands)
         cash_allocation: user allocation to cash (£ thousands)
         securities_allocation: user allocation to securities (£ thousands)
@@ -194,11 +199,11 @@ def update_sliders(
         mortgage = mortgage_data[mortgage_idx]
         deposit = int(mortgage.get("deposit"))
         mortgage_fees = int(mortgage_fees / 1000)
-        stamp_duty_payable = int(stamp_duty_payable / 1000)
+        stamp_duty = int(stamp_duty / 1000)
 
         # Get the maximum values for each slider
-        max_cash = total_wealth - (deposit + securities_allocation + mortgage_fees + stamp_duty_payable)
-        max_securities = total_wealth - (cash_allocation + deposit + mortgage_fees + stamp_duty_payable)
+        max_cash = total_wealth - (deposit + securities_allocation + mortgage_fees + stamp_duty)
+        max_securities = total_wealth - (cash_allocation + deposit + mortgage_fees + stamp_duty)
 
         # Get the step sizes for the marks
         order_of_magnitude = math.floor(math.log10(max_cash + max_securities)) - 1
@@ -255,9 +260,25 @@ def fill_wealth_value(url: str, data: str) -> int:
     [State("data-store-mortgage", "data")],
 )
 def update_plot(
-    cash_r, property_r, securities_r, cash_allocation, securities_allocation, mortgage_idx,
-        stamp_duty, mortgage_data
-):
+    cash_r: float, property_r: float, securities_r: float, cash_allocation: int, securities_allocation: int, mortgage_idx: int,
+        stamp_duty: int, mortgage_data: str
+) -> go.Figure:
+    """
+    Updates plot showing household balance sheet and income / expenditure over time.
+
+    Args:
+        cash_r: rate of return on cash (%)
+        property_r: rate of return on property (%)
+        securities_r: rate of return on securities (%)
+        cash_allocation: user initial allocation to cash (£ ,000)
+        securities_allocation: user initial allocation to securities (£ ,000)
+        mortgage_idx: index of selected mortgage
+        stamp_duty: stamp duty payable (£)
+        mortgage_data: JSON str of saved mortgage data
+
+    Returns:
+        go.Figure object of household balance sheet and income / expenditure statement
+    """
     # Will only show plot if a mortgage has been selected
     if mortgage_idx is None:
         raise PreventUpdate
@@ -271,7 +292,26 @@ def update_plot(
 
     fig = go.Figure()
 
-    # 1. Liabilities
+    # 1. Income
+
+    # TODO: Show bar chart of expected rental income / income savings
+
+    # 2. Expenditure
+
+    # TODO: Add mortgage fees and ongoing expenses to Bar trace
+
+    # Stamp duty one off cost in period one
+    stamp_duty_exp = np.append(np.array([-stamp_duty]), np.zeros(len(x) - 1))
+
+    fig.add_trace(
+        go.Bar(
+            x=x,
+            y=stamp_duty_exp,
+            name="Stamp duty"
+        )
+    )
+
+    # 3. Liabilities
     mortgage_balance = _get_mortgage_balance(mortgage)
 
     fig.add_trace(
@@ -285,8 +325,7 @@ def update_plot(
         )
     )
 
-    # 2. Assets
-
+    # 4. Assets
     cash_array = np.array(
         [npf.fv((cash_r / 100) / 12, i, 0, -(cash_allocation * 1000)) for i in range(term)]
     )
@@ -318,6 +357,7 @@ def update_plot(
         )
     )
 
+    # TODO: Assume all saved income reinvested in securities (update pmt arg (0) to payment)
     securities_array = np.array(
         [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(term)]
     )
@@ -346,22 +386,7 @@ def update_plot(
         )
     )
 
-    # 3. Income
-
-    # 4. Expenditure
-
-    # Stamp duty one off cost in period one
-    stamp_duty_exp = np.append(np.array([-stamp_duty]), np.zeros(len(x) - 1))
-
-    fig.add_trace(
-        go.Bar(
-            x=x,
-            y=stamp_duty_exp,
-            name="Stamp duty"
-        )
-    )
     # 5. Wealth
-
     wealth = total_array - mortgage_balance
 
     fig.add_trace(
