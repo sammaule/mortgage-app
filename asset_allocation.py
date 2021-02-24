@@ -15,6 +15,7 @@ import numpy as np
 import numpy_financial as npf
 
 from app import app
+from budget import stamp_duty_payable
 
 # TODO: Update to be consistent with household balance sheet on paper
 
@@ -32,8 +33,7 @@ asset_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Property allocation"),
-                        # TODO: update so just text updated on selection of mortgage
-                        dcc.Slider(id="property-allocation", min=0, step=1, value=0, ),
+                        html.H5(id="property-allocation"),
                     ]
                 ),
                 dbc.FormGroup(
@@ -152,26 +152,31 @@ layout = html.Div(
 
 @app.callback(
     [
-        Output("property-allocation", "max"),
         Output("cash-allocation", "max"),
         Output("securities-allocation", "max"),
-        Output("property-allocation", "marks"),
         Output("cash-allocation", "marks"),
         Output("securities-allocation", "marks"),
     ],
     [
         Input("total-wealth-allocation", "value"),
-        Input("property-allocation", "value"),
         Input("cash-allocation", "value"),
         Input("securities-allocation", "value"),
+        Input("stamp-duty-cost", "value"),
+        Input("mortgage-fees-cost", "value"),
+        Input("mortgage-dropdown", "value"),
     ],
+    [State("data-store-mortgage", "data"),
+     ]
 )
 def update_sliders(
     total_wealth: Optional[int],
-    property_allocation: Optional[int],
     cash_allocation: Optional[int],
     securities_allocation: Optional[int],
-) -> Tuple[int, int, int, Dict[int, str], Dict[int, str], Dict[int, str]]:
+    stamp_duty_payable: int,
+    mortgage_fees: int,
+    mortgage_idx: int,
+    mortgage_data: str,
+) -> Tuple[int, int, Dict[int, str], Dict[int, str]]:
     """Updates sliders such that the max values add up to total wealth. Updates markers to
     a range of sensible values according to total wealth.
 
@@ -179,33 +184,34 @@ def update_sliders(
 
     Args:
         total_wealth: total wealth (£ thousands)
-        property_allocation: user allocation to property (£ thousands)
         cash_allocation: user allocation to cash (£ thousands)
         securities_allocation: user allocation to securities (£ thousands)
     """
     if all(
-        v is not None for v in [total_wealth, property_allocation, cash_allocation, securities_allocation,]
+        v is not None for v in [total_wealth, cash_allocation, securities_allocation, mortgage_idx]
     ):
+        mortgage_data = json.loads(mortgage_data)
+        mortgage = mortgage_data[mortgage_idx]
+        deposit = int(mortgage.get("deposit"))
+        mortgage_fees = int(mortgage_fees / 1000)
+        stamp_duty_payable = int(stamp_duty_payable / 1000)
+
         # Get the maximum values for each slider
-        max_property = total_wealth - (cash_allocation + securities_allocation)
-        max_cash = total_wealth - (property_allocation + securities_allocation)
-        max_securities = total_wealth - (cash_allocation + property_allocation)
+        max_cash = total_wealth - (deposit + securities_allocation + mortgage_fees + stamp_duty_payable)
+        max_securities = total_wealth - (cash_allocation + deposit + mortgage_fees + stamp_duty_payable)
 
         # Get the step sizes for the marks
-        order_of_magnitude = math.floor(math.log10(total_wealth)) - 1
+        order_of_magnitude = math.floor(math.log10(max_cash + max_securities)) - 1
         multiple = int(str(total_wealth)[0]) * 10
         step_size = int(multiple ** order_of_magnitude) if order_of_magnitude >= 0 else 1
 
         # Get a dictionary of markers in correct format
-        property_marks = {i: f"{i: ,}" for i in range(0, max_property + step_size, step_size)}
         cash_marks = {i: f"{i: ,}" for i in range(0, max_cash + step_size, step_size)}
         securities_marks = {i: f"{i: ,}" for i in range(0, max_securities + step_size, step_size)}
 
         return (
-            max_property,
             max_cash,
             max_securities,
-            property_marks,
             cash_marks,
             securities_marks,
         )
@@ -405,26 +411,38 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
 
 
 @app.callback(
-    Output("property-allocation", "value"),
+    [Output("property-allocation", "children"),
+     Output("stamp-duty-cost", "value"),
+     ],
     [Input("mortgage-dropdown", "value")],
-    [State("data-store-mortgage", "data")],
+    [State("data-store-mortgage", "data"),
+     State("data-store", "data"),
+     ],
 )
-def update_property_allocation(dropdown_val: int, data: str) -> int:
+def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str) -> Tuple[str, float]:
     """
     Updates the property allocation to the value of the mortgage deposit selected.
 
     Args:
         dropdown_val: index of selected mortgage in data
-        data: JSON str of saved mortgages
+        mortgage_data: JSON str of saved mortgages
+        data: JSON str of data from budget page
 
     Returns:
         deposit size allocated to property
     """
     if dropdown_val is not None:
+        mortgage_data = json.loads(mortgage_data)
+        selected_mortgage = mortgage_data[dropdown_val]
+        deposit = f"£{int(selected_mortgage.get('deposit')) * 1000: ,}"
+
+        # Get the amount of stamp duty payable
+        purchase_price = selected_mortgage.get("purchase_price") * 1000
         data = json.loads(data)
-        selected_mortgage = data[dropdown_val]
-        deposit = int(selected_mortgage.get("deposit"))
-        return deposit
+        higher_rate = True if data.get("stamp_duty_rate") == "higher_rate" else False
+        sdp = int(stamp_duty_payable(purchase_price, higher_rate))
+
+        return deposit, sdp
     else:
         raise PreventUpdate
 

@@ -218,11 +218,12 @@ def calc_ltv(
         stamp_duty_on_target_date_str = f"£{int(stamp_duty): ,}"
 
         data_storage = {
-            "savings": savings,
+            "savings": savings_on_target_date / 1000,
             "deposit": deposit,
             "mortgage": mortgage,
             "value": property_value,
             "stamp_duty": stamp_duty,
+            "stamp_duty_rate": stamp_duty_rate,
             "income": income,
         }
         data_storage = json.dumps(data_storage)
