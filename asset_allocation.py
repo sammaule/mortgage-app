@@ -90,6 +90,7 @@ income_card = dbc.Card(
                         dbc.FormGroup(
                             [
                                 dbc.Label("for", className="mr-2"),
+                                # TODO: Add callback to set max to length of mortgage
                                 dbc.Input(
                                     id="rental-income-months",
                                     type="number",
@@ -319,11 +320,12 @@ def update_plot(
     fig = go.Figure()
 
     # 1. Income
+    zero_padding_rent = None
+    if all(v is not None and v != 0 for v in [rental_income, rental_income_months]):
+        rental_income = np.array([rental_income] * rental_income_months)
+        zero_padding_rent = np.zeros(len(x) - rental_income_months)
 
-    rental_income = np.array([rental_income] * rental_income_months)
-    zero_padding_rent = np.zeros(len(x) - rental_income_months)
-
-    fig.add_trace(go.Bar(x=x, y=np.append(rental_income, zero_padding_rent), name="Rental income"))
+        fig.add_trace(go.Bar(x=x, y=np.append(rental_income, zero_padding_rent), name="Rental income"))
 
     # 2. Expenditure
 
@@ -379,14 +381,19 @@ def update_plot(
     )
 
     # Assumes that all rental income is reinvested in securities
-    securities_array_rent = np.array(
-        [npf.fv((securities_r / 100) / 12, i, -rent, -(securities_allocation * 1000)) for i, rent in enumerate(rental_income)]
-    )
-    start_balance = securities_array_rent[-1]
-    securities_array_post_rent = np.array(
-        [npf.fv((securities_r / 100) / 12, i, 0, -start_balance) for i in range(len(zero_padding_rent))]
-    )
-    securities_array = np.append(securities_array_rent, securities_array_post_rent)
+    if isinstance(rental_income, np.ndarray):
+        securities_array_rent = np.array(
+            [npf.fv((securities_r / 100) / 12, i, -rent, -(securities_allocation * 1000)) for i, rent in enumerate(rental_income)]
+        )
+        start_balance = securities_array_rent[-1]
+        securities_array_post_rent = np.array(
+            [npf.fv((securities_r / 100) / 12, i, 0, -start_balance) for i in range(len(zero_padding_rent))]
+        )
+        securities_array = np.append(securities_array_rent, securities_array_post_rent)
+    else:
+        securities_array = np.array(
+            [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(term)]
+        )
 
     fig.add_trace(
         go.Scatter(
