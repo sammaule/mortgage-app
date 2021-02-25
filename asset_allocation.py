@@ -76,11 +76,34 @@ income_card = dbc.Card(
                         dbc.Input(id="securities-r", type="number", min=0, step=0.1, max=1000, value=4.0,),
                     ]
                 ),
-                dbc.FormGroup(
+                dbc.Form(
                     [
-                        dbc.Label("Rental income (monthly)"),
-                        dbc.Input(id="rental-income", type="number", min=0, step=1, max=10000, value=0,),
-                    ]
+                        dbc.FormGroup(
+                            [
+                                dbc.Label("Rental income (monthly)", className="mr-2"),
+                                dbc.Input(
+                                    id="rental-income", type="number", min=0, step=1, max=10000, value=0,
+                                ),
+                            ],
+                            className="mr-3",
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Label("for", className="mr-2"),
+                                dbc.Input(
+                                    id="rental-income-months",
+                                    type="number",
+                                    min=0,
+                                    step=1,
+                                    max=10000,
+                                    value=0,
+                                ),
+                                dbc.Label("months", className="ml-2"),
+                            ],
+                            className="mr-3",
+                        ),
+                    ],
+                    inline=True,
                 ),
             ]
         ),
@@ -244,6 +267,7 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("property-r", "value"),
         Input("securities-r", "value"),
         Input("rental-income", "value"),
+        Input("rental-income-months", "value"),
         Input("cash-allocation", "value"),
         Input("securities-allocation", "value"),
         Input("mortgage-dropdown", "value"),
@@ -256,6 +280,7 @@ def update_plot(
     property_r: float,
     securities_r: float,
     rental_income: int,
+    rental_income_months: int,
     cash_allocation: int,
     securities_allocation: int,
     mortgage_idx: int,
@@ -270,6 +295,7 @@ def update_plot(
         property_r: rate of return on property (%)
         securities_r: rate of return on securities (%)
         rental_income: expected rental income (£ /month)
+        rental_income_months: number of months expected rental income
         cash_allocation: user initial allocation to cash (£ ,000)
         securities_allocation: user initial allocation to securities (£ ,000)
         mortgage_idx: index of selected mortgage
@@ -294,8 +320,10 @@ def update_plot(
 
     # 1. Income
 
-    # TODO: Show bar chart of expected rental income / income savings
-    rental_income = np.array([rental_income] * len(x))
+    rental_income = np.array([rental_income] * rental_income_months)
+    zero_padding_rent = np.zeros(len(x) - rental_income_months)
+
+    fig.add_trace(go.Bar(x=x, y=np.append(rental_income, zero_padding_rent), name="Rental income"))
 
     # 2. Expenditure
 
@@ -351,9 +379,14 @@ def update_plot(
     )
 
     # Assumes that all rental income is reinvested in securities
-    securities_array = np.array(
+    securities_array_rent = np.array(
         [npf.fv((securities_r / 100) / 12, i, -rent, -(securities_allocation * 1000)) for i, rent in enumerate(rental_income)]
     )
+    start_balance = securities_array_rent[-1]
+    securities_array_post_rent = np.array(
+        [npf.fv((securities_r / 100) / 12, i, 0, -start_balance) for i in range(len(zero_padding_rent))]
+    )
+    securities_array = np.append(securities_array_rent, securities_array_post_rent)
 
     fig.add_trace(
         go.Scatter(
