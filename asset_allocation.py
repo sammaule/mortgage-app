@@ -243,6 +243,7 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("cash-r", "value"),
         Input("property-r", "value"),
         Input("securities-r", "value"),
+        Input("rental-income", "value"),
         Input("cash-allocation", "value"),
         Input("securities-allocation", "value"),
         Input("mortgage-dropdown", "value"),
@@ -254,6 +255,7 @@ def update_plot(
     cash_r: float,
     property_r: float,
     securities_r: float,
+    rental_income: int,
     cash_allocation: int,
     securities_allocation: int,
     mortgage_idx: int,
@@ -267,6 +269,7 @@ def update_plot(
         cash_r: rate of return on cash (%)
         property_r: rate of return on property (%)
         securities_r: rate of return on securities (%)
+        rental_income: expected rental income (£ /month)
         cash_allocation: user initial allocation to cash (£ ,000)
         securities_allocation: user initial allocation to securities (£ ,000)
         mortgage_idx: index of selected mortgage
@@ -292,6 +295,7 @@ def update_plot(
     # 1. Income
 
     # TODO: Show bar chart of expected rental income / income savings
+    rental_income = np.array([rental_income] * len(x))
 
     # 2. Expenditure
 
@@ -346,9 +350,9 @@ def update_plot(
         )
     )
 
-    # TODO: Assume all saved income reinvested in securities (update pmt arg (0) to payment)
+    # Assumes that all rental income is reinvested in securities
     securities_array = np.array(
-        [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(term)]
+        [npf.fv((securities_r / 100) / 12, i, -rent, -(securities_allocation * 1000)) for i, rent in enumerate(rental_income)]
     )
 
     fig.add_trace(
