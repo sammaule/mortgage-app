@@ -19,6 +19,7 @@ from budget import stamp_duty_payable
 
 # TODO: Add some tooltips to explain underlying assumptions / data etc.
 # TODO: Add option to save scenario and add a page that shows the various scenarios in a data table
+# TODO: Add 'no mortgage' option to generate scenarios where house is not purchased.
 
 asset_card = dbc.Card(
     [
