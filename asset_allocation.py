@@ -501,9 +501,18 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
         raise PreventUpdate
 
 
-# TODO: Tidy function, add docstring etc.
-def _get_mortgage_balance(mortgage):
+def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
+    """
+    Returns array of outstanding mortgage balance for each month, from dict of mortgage information.
 
+    Args:
+        mortgage: dict with keys 'mortgage_size', 'term', 'offer_term', 'interest_rate' and 'offer_rate'
+
+    Returns:
+        array of outstanding mortgage balances
+    """
+
+    # Get variables
     mortgage_size = int(mortgage.get("mortgage_size")) * 1000
     term = mortgage.get("term") * 12
     offer_term = mortgage.get("offer_term") * 12
@@ -513,16 +522,18 @@ def _get_mortgage_balance(mortgage):
     interest_rate = (mortgage.get("interest_rate") / 12) / 100
     offer_rate = (mortgage.get("offer_rate") / 12) / 100  # monthly interest rate
 
-    per = np.arange(term) + 1
-    offer_principal_payments = (-1 * npf.ppmt(offer_rate, per, term, mortgage_size))[:offer_term]
+    # Get offer principal payments
+    offer_per = np.arange(term) + 1
+    offer_principal_payments = (-1 * npf.ppmt(offer_rate, offer_per, term, mortgage_size))[:offer_term]
 
+    # Get regular principal payments
     balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
 
-    per = np.arange(remaining_term) + 1
-    remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
+    remaining_per = np.arange(remaining_term) + 1
+    remaining_principal_payments = -1 * npf.ppmt(interest_rate, remaining_per, remaining_term, balance_after_offer)
 
     principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
 
+    # Get outstanding balance
     outstanding_balance = mortgage_size - np.cumsum(principal_payments)
-
     return outstanding_balance
