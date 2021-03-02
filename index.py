@@ -33,6 +33,8 @@ app.layout = html.Div([
             "purchase_price": 0
               }])
               ),
+    dcc.Store(id="current-allocation-scenario", storage_type="session"),
+    dcc.Store(id="allocation-scenarios", storage_type="session"),
     navbar,
     # TODO: Add welcome to app page - with "next" button to take user to budget page
     html.Div(id='page-content')

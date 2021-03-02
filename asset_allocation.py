@@ -50,7 +50,17 @@ asset_card = dbc.Card(
 liability_card = dbc.Card(
     [
         dbc.CardHeader("Liabilities"),
-        dbc.CardBody([dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),]),
+        dbc.CardBody([
+            dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
+            dbc.FormGroup(
+                    [
+                        dbc.Label("Scenario name"),
+                        dbc.Input(id="scenario-name", type="text", value="Scenario 1",),
+                    ]
+                ),
+            dbc.Button("Save Scenario", color="primary", size="lg", id="save-scenario"),
+        ]),
+
     ]
 )
 
@@ -247,29 +257,10 @@ def update_sliders(
 
 
 @app.callback(
-    Output("total-wealth-allocation", "value"), [Input("url", "pathname")], [State("data-store", "data")],
-)
-def fill_wealth_value(url: str, data: str) -> int:
-    """"
-    Returns the total savings value defined by user on budget page, rounded to the nearest thousand.
-
-    Args:
-        url: change in url triggers callback
-        data: json string
-
-    Returns:
-        total wealth rounded to nearest thousand, or zero if not provided.
-    """
-    if data:
-        data = json.loads(data)
-        savings = int(round(data.get("savings")))
-        return savings
-    else:
-        return 0
-
-
-@app.callback(
-    Output("allocation-plot", "figure"),
+    [
+        Output("allocation-plot", "figure"),
+        Output("current-allocation-scenario", "data")
+    ],
     [
         Input("cash-r", "value"),
         Input("property-r", "value"),
@@ -283,8 +274,10 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("housing-upkeep-cost", "value"),
         Input("rent-cost", "value"),
         Input("savable-income", "value"),
+        Input("allocation-scenarios", "data"),
     ],
-    [State("data-store-mortgage", "data")],
+    [State("data-store-mortgage", "data"),
+     ],
 )
 def update_plot(
     cash_r: float,
@@ -299,8 +292,9 @@ def update_plot(
     housing_upkeep: int,
     rent_out: int,
     savable_income: int,
+    allocation_scenarios: str,
     mortgage_data: str,
-) -> go.Figure:
+) -> Tuple[go.Figure, str]:
     """
     Updates plot showing household balance sheet and income / expenditure over time.
 
@@ -317,6 +311,7 @@ def update_plot(
         housing_upkeep: monthly housing upkeep (£)
         rent_out: monthly rent expenditure (£)
         savable_income: monthly savable income (£)
+        allocation_scenarios: JSON str of saved scenarios
         mortgage_data: JSON str of saved mortgage data
 
     Returns:
@@ -450,7 +445,57 @@ def update_plot(
             hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
         )
     )
-    return fig
+
+    # Show other scenarios
+    if allocation_scenarios is not None:
+        allocation_scenarios = json.loads(allocation_scenarios)
+        for scenario in allocation_scenarios:
+            dates = [datetime.datetime.strptime(i, "%Y-%m-%d") for i in scenario['x']]
+            data = dict(zip(dates, scenario["wealth"]))
+            scenario_data = []
+            for date in x:
+                date = date.to_pydatetime().replace(hour=0, minute=0, second=0, microsecond=0)
+                if date in data.keys():
+                    scenario_data.append(data[date])
+                else:
+                    scenario_data.append(np.nan)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=scenario_data,
+                    fillcolor="rgba(0,176,246,0.2)",
+                    line={"color": "grey", "width": 2},
+                    name=scenario['name'],
+                    hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
+                )
+            )
+
+    x_as_str = x.format(formatter=lambda x: x.strftime("%Y-%m-%d"))
+    allocation_scenario = json.dumps({"x": list(x_as_str), "wealth": list(wealth)})
+    return fig, allocation_scenario
+
+
+@app.callback(
+    Output("total-wealth-allocation", "value"), [Input("url", "pathname")], [State("data-store", "data")],
+)
+def fill_wealth_value(url: str, data: str) -> int:
+    """"
+    Returns the total savings value defined by user on budget page, rounded to the nearest thousand.
+
+    Args:
+        url: change in url triggers callback
+        data: json string
+
+    Returns:
+        total wealth rounded to nearest thousand, or zero if not provided.
+    """
+    if data:
+        data = json.loads(data)
+        savings = int(round(data.get("savings")))
+        return savings
+    else:
+        return 0
 
 
 @app.callback(
@@ -517,6 +562,49 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
         return deposit, sdp
     else:
         raise PreventUpdate
+
+@app.callback(
+    Output("allocation-scenarios", "data"),
+    [Input("save-scenario", "n_clicks"), ],
+    [
+        State("current-allocation-scenario", "data"),
+        State("allocation-scenarios", "data"),
+        State("scenario-name", "value")
+    ],
+)
+def save_mortgage_info(
+    n_clicks: Optional[int],
+    current_scenario: Optional[str],
+    allocation_scenarios: Optional[str],
+    scenario_name: str
+) -> str:
+    """
+    Callback that stores the mortgage data displayed on page to the data-store-mortgage session memory on
+    click of save-button-mortgage. Opens modal window to confirm data saved.
+
+    Args:
+        n_clicks: number of times button clicked. None if not clicked.
+        current_scenario: JSON str of currently scenario
+
+    Returns:
+        JSON str of data-store-mortgage session memory
+        bool to determine if mortgage-saved-popup window is open
+    """
+    if n_clicks is None or current_scenario is None:
+        raise PreventUpdate
+    else:
+        current_scenario = json.loads(current_scenario)
+        current_scenario["name"] = scenario_name
+        if allocation_scenarios is None:
+            allocation_scenarios = json.dumps([current_scenario])
+            return allocation_scenarios
+        else:
+            allocation_scenarios = json.loads(allocation_scenarios)
+            # If the mortgage data hasn't been added before append it
+            if all(i != current_scenario for i in allocation_scenarios):
+                allocation_scenarios.append(current_scenario)
+            allocation_scenarios = json.dumps(allocation_scenarios)
+            return allocation_scenarios
 
 
 def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
