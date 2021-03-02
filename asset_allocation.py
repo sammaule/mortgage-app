@@ -179,6 +179,7 @@ chart_card = dbc.Card(
 
 layout = html.Div(
     [
+        dcc.Store(id="current-allocation-scenario", storage_type="session"),
         dbc.Row([dbc.Col(asset_card, width=6), dbc.Col(liability_card, width=6),]),
         dbc.Row([dbc.Col(income_card, width=6), dbc.Col(monthly_costs_card, width=6),]),
         dbc.Row([dbc.Col(chart_card, width=12)]),
