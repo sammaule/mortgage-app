@@ -18,7 +18,8 @@ from app import app
 from budget import stamp_duty_payable
 
 # TODO: Add some tooltips to explain underlying assumptions / data etc.
-# TODO: Add option to save scenario and add a page that shows the various scenarios in a data table
+# TODO: Add option to save scenario which saves wealth line in JSON and displays with name on chart.
+# TODO: Save asset / liabilities output to a datatable
 # TODO: Add 'no mortgage' option to generate scenarios where house is not purchased.
 
 asset_card = dbc.Card(
@@ -280,6 +281,11 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("securities-allocation", "value"),
         Input("mortgage-dropdown", "value"),
         Input("stamp-duty-cost", "value"),
+        Input("bills-cost", "value"),
+        Input("housing-upkeep-cost", "value"),
+        Input("rent-cost", "value"),
+        Input("mortgage-fees-cost", "value"),
+        Input("savable-income", "value"),
     ],
     [State("data-store-mortgage", "data")],
 )
@@ -292,7 +298,10 @@ def update_plot(
     cash_allocation: int,
     securities_allocation: int,
     mortgage_idx: int,
-    stamp_duty: int,
+    bills: int,
+    housing_upkeep: int,
+    rent_out: int,
+    savable_income: int,
     mortgage_data: str,
 ) -> go.Figure:
     """
@@ -307,7 +316,10 @@ def update_plot(
         cash_allocation: user initial allocation to cash (£ ,000)
         securities_allocation: user initial allocation to securities (£ ,000)
         mortgage_idx: index of selected mortgage
-        stamp_duty: stamp duty payable (£)
+        bills: monthly bills (£)
+        housing_upkeep: monthly housing upkeep (£)
+        rent_out: monthly rent expenditure (£)
+        savable_income: monthly savable income (£)
         mortgage_data: JSON str of saved mortgage data
 
     Returns:
@@ -325,23 +337,6 @@ def update_plot(
     x = pd.date_range(datetime.datetime.now(), periods=term, freq="M")
 
     fig = go.Figure()
-
-    # 1. Income
-    zero_padding_rent = None
-    if all(v is not None and v != 0 for v in [rental_income, rental_income_months]):
-        rental_income = np.array([rental_income] * rental_income_months)
-        zero_padding_rent = np.zeros(len(x) - rental_income_months)
-
-        fig.add_trace(go.Bar(x=x, y=np.append(rental_income, zero_padding_rent), name="Rental income"))
-
-    # 2. Expenditure
-
-    # TODO: Add mortgage fees and ongoing expenses to Bar trace
-
-    # Stamp duty one off cost in period one
-    stamp_duty_exp = np.append(np.array([-stamp_duty]), np.zeros(len(x) - 1))
-
-    fig.add_trace(go.Bar(x=x, y=stamp_duty_exp, name="Stamp duty"))
 
     # 3. Liabilities
     mortgage_balance = _get_mortgage_balance(mortgage)
@@ -387,19 +382,35 @@ def update_plot(
         )
     )
 
-    # Assumes that all rental income is reinvested in securities
-    if isinstance(rental_income, np.ndarray):
+    # Assumes that all net income is reinvested in securities
+    if all(v is not None for v in [savable_income, rental_income, bills, housing_upkeep, rent_out]):
+
+        # Get the net income during rent period
+        net_income_rental_period = _get_net_savings(savable_income, rental_income, bills, housing_upkeep, rent_out)
+        net_income_rental_period = np.array([net_income_rental_period] * rental_income_months)
         securities_array_rent = np.array(
-            [npf.fv((securities_r / 100) / 12, i, -rent, -(securities_allocation * 1000)) for i, rent in enumerate(rental_income)]
+            [npf.fv((securities_r / 100) / 12, i, -net_income, -(securities_allocation * 1000)) for i, net_income in
+             enumerate(net_income_rental_period)]
         )
-        start_balance = securities_array_rent[-1]
-        securities_array_post_rent = np.array(
-            [npf.fv((securities_r / 100) / 12, i, 0, -start_balance) for i in range(len(zero_padding_rent))]
-        )
-        securities_array = np.append(securities_array_rent, securities_array_post_rent)
+
+        # Get the net income during post rent period
+        post_rent_months = term - rental_income_months
+        if post_rent_months > 0:
+            net_income_post_rental_period = _get_net_savings(savable_income, 0, bills, housing_upkeep, rent_out)
+            net_income_post_rental_period = np.array([net_income_post_rental_period] * post_rent_months)
+
+            start_balance = securities_array_rent[-1] if len(securities_array_rent) > 0 else securities_allocation * 1000
+            securities_array_post_rent = np.array(
+                [npf.fv((securities_r / 100) / 12, i, -net_income, -start_balance) for i, net_income in
+                 enumerate(net_income_post_rental_period)]
+            )
+            securities_array = np.append(securities_array_rent, securities_array_post_rent)
+        else:
+            securities_array = securities_array_rent
     else:
         securities_array = np.array(
-            [npf.fv((securities_r / 100) / 12, i, 0, -(securities_allocation * 1000)) for i in range(term)]
+            [npf.fv((securities_r / 100) / 12, i, -0, -(securities_allocation * 1000)) for
+             i in range(term)]
         )
 
     fig.add_trace(
@@ -544,3 +555,7 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     # Get outstanding balance
     outstanding_balance = mortgage_size - np.cumsum(principal_payments)
     return outstanding_balance
+
+# TODO: Update so takes mortgage payments as input too
+def _get_net_savings(savable_income, rent_income, bills, housing_upkeep, rent_out):
+    return savable_income + rent_income - bills - housing_upkeep - rent_out
