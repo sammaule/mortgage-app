@@ -77,6 +77,12 @@ income_card = dbc.Card(
                         dbc.Input(id="securities-r", type="number", min=0, step=0.1, max=1000, value=4.0,),
                     ]
                 ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Savable income (monthly)"),
+                        dbc.Input(id="savable-income", type="number", min=0, step=100),
+                    ]
+                ),
                 dbc.Form(
                     [
                         dbc.FormGroup(
