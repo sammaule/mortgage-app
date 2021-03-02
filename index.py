@@ -1,4 +1,6 @@
 """Loads different apps on different urls."""
+import json
+
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
@@ -24,7 +26,13 @@ navbar = dbc.NavbarSimple(
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     dcc.Store(id="data-store", storage_type="session"),
-    dcc.Store(id="data-store-mortgage", storage_type="session"),
+    dcc.Store(id="data-store-mortgage", storage_type="session",
+              data=json.dumps([{
+            "deposit": 0,
+            "mortgage_size": 0,
+            "purchase_price": 0
+              }])
+              ),
     navbar,
     # TODO: Add welcome to app page - with "next" button to take user to budget page
     html.Div(id='page-content')

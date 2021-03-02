@@ -20,7 +20,6 @@ from budget import stamp_duty_payable
 # TODO: Add some tooltips to explain underlying assumptions / data etc.
 # TODO: Add option to save scenario which saves wealth line in JSON and displays with name on chart.
 # TODO: Save asset / liabilities output to a datatable
-# TODO: Add 'no mortgage' option to generate scenarios where house is not purchased.
 
 asset_card = dbc.Card(
     [
@@ -280,11 +279,9 @@ def fill_wealth_value(url: str, data: str) -> int:
         Input("cash-allocation", "value"),
         Input("securities-allocation", "value"),
         Input("mortgage-dropdown", "value"),
-        Input("stamp-duty-cost", "value"),
         Input("bills-cost", "value"),
         Input("housing-upkeep-cost", "value"),
         Input("rent-cost", "value"),
-        Input("mortgage-fees-cost", "value"),
         Input("savable-income", "value"),
     ],
     [State("data-store-mortgage", "data")],
@@ -333,13 +330,16 @@ def update_plot(
     mortgage = data[mortgage_idx]
 
     # Set date range to mortgage term
-    term = mortgage.get("term") * 12
+    term = mortgage.get("term", 20) * 12
     x = pd.date_range(datetime.datetime.now(), periods=term, freq="M")
 
     fig = go.Figure()
 
     # 3. Liabilities
-    mortgage_balance = _get_mortgage_balance(mortgage)
+    if mortgage.get("mortgage_size", 0) == 0:
+        mortgage_balance = np.array([0] * term)
+    else:
+        mortgage_balance = _get_mortgage_balance(mortgage)
 
     fig.add_trace(
         go.Scatter(
@@ -474,9 +474,9 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
         data = json.loads(data)
         options = [
             {
-                "label": f"£{int(i.get('mortgage_size', 0)):,}k {i.get('term')}y, "
-                f"{i.get('offer_term')}y @{i.get('offer_rate')}% "
-                f"then {i.get('interest_rate')}%. £{int(i.get('deposit'))}k deposit",
+                "label": f"£{int(i.get('mortgage_size', 0)):,}k {i.get('term', 0)}y, "
+                f"{i.get('offer_term', 0)}y @{i.get('offer_rate', 0)}% "
+                f"then {i.get('interest_rate', 0)}%. £{int(i.get('deposit', 0))}k deposit",
                 "value": val,
             }
             for val, i in enumerate(data)
