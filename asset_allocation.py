@@ -153,6 +153,18 @@ expenditure_card = dbc.Card(
                 ),
                 dbc.FormGroup(
                     [
+                        dbc.Label("Mortgage payment (initial)"),
+                        html.H5(id="mortgage-payment-initial-allocation"),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Mortgage payment"),
+                        html.H5(id="mortgage-payment-allocation"),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
                         dbc.Label("Housing upkeep (monthly)"),
                         dbc.Input(
                             id="housing-upkeep-cost", type="number", min=0, step=10, max=10000, value=0,
