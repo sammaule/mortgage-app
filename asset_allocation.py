@@ -668,7 +668,18 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     outstanding_balance = mortgage_size - np.cumsum(principal_payments)
     return outstanding_balance
 
-# TODO: Update so takes arrays as input including mortgage payments
-# TODO: Add docstrings and type hints
-def _get_net_savings(savable_income, rent_income, bills, housing_upkeep, rent_out):
+def _get_net_savings(savable_income: int, rent_income: int, bills: int, housing_upkeep: int, rent_out: int) -> int:
+    """
+    Returns net monthly savings from user inputs.
+
+    Args:
+        savable_income: monthly savable income (£)
+        rent_income: monthly rental income (£)
+        bills: monthly bills (£)
+        housing_upkeep: monthly housing upkeep (£)
+        rent_out: monthly rent expenditure (£)
+
+    Returns:
+        net savings (£)
+    """
     return savable_income + rent_income - bills - housing_upkeep - rent_out
