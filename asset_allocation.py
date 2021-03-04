@@ -387,6 +387,7 @@ def update_plot(
         )
     )
 
+    # TODO: Fix bug where not updated if rent isn't set to a number
     # Assumes that all net income is reinvested in securities
     if all(v is not None for v in [savable_income, rental_income, bills, housing_upkeep, rent_out]):
 
