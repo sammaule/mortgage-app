@@ -18,8 +18,6 @@ from app import app
 from budget import stamp_duty_payable
 
 # TODO: Add some tooltips to explain underlying assumptions / data etc.
-# TODO: Add option to save scenario which saves wealth line in JSON and displays with name on chart.
-# TODO: Save asset / liabilities output to a datatable
 
 asset_card = dbc.Card(
     [
@@ -107,7 +105,6 @@ income_card = dbc.Card(
                         dbc.FormGroup(
                             [
                                 dbc.Label("for", className="mr-2"),
-                                # TODO: Add callback to set max to length of mortgage
                                 dbc.Input(
                                     id="rental-income-months",
                                     type="number",
@@ -129,9 +126,9 @@ income_card = dbc.Card(
 )
 
 
-monthly_costs_card = dbc.Card(
+expenditure_card = dbc.Card(
     [
-        dbc.CardHeader("Monthly costs"),
+        dbc.CardHeader("Expenditure"),
         dbc.CardBody(
             [
                 dbc.FormGroup(
@@ -181,7 +178,7 @@ layout = html.Div(
     [
         dcc.Store(id="current-allocation-scenario", storage_type="session"),
         dbc.Row([dbc.Col(asset_card, width=6), dbc.Col(liability_card, width=6),]),
-        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(monthly_costs_card, width=6),]),
+        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(expenditure_card, width=6), ]),
         dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
@@ -383,6 +380,7 @@ def update_plot(
 
         # Get the net income during rent period
         net_income_rental_period = _get_net_savings(savable_income, rental_income, bills, housing_upkeep, rent_out)
+        rental_income_months = min(term, rental_income_months)
         net_income_rental_period = np.array([net_income_rental_period] * rental_income_months)
         securities_array_rent = np.array(
             [npf.fv((securities_r / 100) / 12, i, -net_income, -(securities_allocation * 1000)) for i, net_income in
