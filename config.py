@@ -1,9 +1,10 @@
+"""Config data"""
 from datetime import datetime
 
 import numpy as np
 
 # Taken from https://www.gov.uk/stamp-duty-land-tax/residential-property-rates
-stamp_duty = [
+stamp_duty_rates = [
     {
         "date_range": (datetime(2020, 7, 8), datetime(2021, 6, 30)),
         "thresholds": [500_000, 925_000, 1_500_000, np.inf],
