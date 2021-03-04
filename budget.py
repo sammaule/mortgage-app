@@ -153,12 +153,14 @@ layout = html.Div(
         Input("target-purchase-date", "date"),
     ],
 )
-def calc_ltv(
+def plot_affordability(
     savings: int, saving_rate: int, r: float, income: int, stamp_duty_rate: str, lti: float, target_date: str
 ) -> Tuple[go.Figure, str, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
     Assumes that all interest is paid monthly at a rate of 1/12 * r and all reinvested.
+
+    Stores data to data-store.
 
     Args:
         savings: Total current savings
@@ -169,7 +171,7 @@ def calc_ltv(
         lti: loan to income ratio
         target_date: purchase date with format YYYY-MM-DD
     """
-    if all(v is not None for v in [savings, saving_rate, r]):
+    if all(v is not None for v in [savings, saving_rate, r, income, lti, target_date]):
         fig = go.Figure()
 
         start_date = datetime.datetime.today().date()
