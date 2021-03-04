@@ -229,6 +229,7 @@ def plot_affordability(
             "stamp_duty": stamp_duty,
             "stamp_duty_rate": stamp_duty_rate,
             "income": income,
+            "target_date": target_date.strftime("%Y-%m-%d")
         }
         data_storage = json.dumps(data_storage)
 
