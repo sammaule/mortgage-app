@@ -1,5 +1,6 @@
 """Contains layout and callbacks for the mortgage page of the app."""
 import json
+import re
 from typing import Tuple, Optional
 
 import dash_bootstrap_components as dbc
@@ -104,6 +105,7 @@ second_card = dbc.Card(
 
 layout = html.Div(
     [
+        dcc.Store(id="mortgage-payments-store", storage_type="session"),
         dbc.Row([dbc.Col(first_card, width=6), dbc.Col(second_card, width=6)]),
         dbc.Row(
             [
@@ -183,6 +185,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
         Output("total-repaid", "children"),
         Output("monthly-payment-offer", "children"),
         Output("monthly-payment", "children"),
+        Output("mortgage-payments-store", "data")
     ],
     [
         Input("deposit-size", "value"),
@@ -195,7 +198,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
 )
 def plot_monthly_repayments(
     deposit: int, purchase_price: int, term: int, interest_rate: float, offer_term: int, offer_rate: float,
-) -> Tuple[go.Figure, str, str, str]:
+) -> Tuple[go.Figure, str, str, str, str]:
     """
     Callback to plot the payment schedule and populate the total interest repaid.
 
@@ -262,7 +265,11 @@ def plot_monthly_repayments(
         interest_paid = f"£{interest_paid:,}"
         offer_pmt = f"£{offer_payments :,.2f}"
         regular_pmt = f"£{remaining_payments :,.2f}"
-        return figure, interest_paid, offer_pmt, regular_pmt
+
+        mortgage_payments_data = json.dumps({
+            "offer_payments": offer_payments,
+            "regular_payments": remaining_payments})
+        return figure, interest_paid, offer_pmt, regular_pmt, mortgage_payments_data
     else:
         raise PreventUpdate
 
@@ -277,6 +284,7 @@ def plot_monthly_repayments(
         State("interest-rate", "value"),
         State("offer-term", "value"),
         State("initial-interest-rate", "value"),
+        State("mortgage-payments-store", "data"),
         State("data-store-mortgage", "data"),
     ],
 )
@@ -288,6 +296,7 @@ def save_mortgage_info(
     interest_rate: float,
     offer_term: int,
     offer_rate: float,
+    mortgage_payments_data: str,
     data: Optional[str],
 ) -> Tuple[str, bool]:
     """
@@ -311,6 +320,10 @@ def save_mortgage_info(
     if n_clicks is None:
         raise PreventUpdate
     else:
+        mortgage_payments_data = json.loads(mortgage_payments_data)
+        offer_payment = mortgage_payments_data.get("offer_payments", 0)
+        regular_payment = mortgage_payments_data.get("regular_payments", 0)
+
         mortgage_data = {
             "deposit": deposit,
             "mortgage_size": purchase_price - deposit,
@@ -319,6 +332,8 @@ def save_mortgage_info(
             "interest_rate": interest_rate,
             "offer_term": offer_term,
             "offer_rate": offer_rate,
+            "offer_payment": offer_payment,
+            "regular_payment": regular_payment,
         }
         if data is None:
             data = json.dumps([mortgage_data])

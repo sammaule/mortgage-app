@@ -543,11 +543,13 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
 
 
 @app.callback(
-    [Output("property-allocation", "children"), Output("stamp-duty-cost", "value"),],
+    [Output("property-allocation", "children"), Output("stamp-duty-cost", "value"),
+     Output("mortgage-payment-initial-allocation", "children"),
+     Output("mortgage-payment-allocation", "children"),],
     [Input("mortgage-dropdown", "value")],
     [State("data-store-mortgage", "data"), State("data-store", "data"),],
 )
-def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str) -> Tuple[str, float]:
+def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str) -> Tuple[str, float, str, str]:
     """
     Updates the property allocation to the value of the mortgage deposit selected.
 
@@ -562,6 +564,8 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
     if dropdown_val is not None:
         mortgage_data = json.loads(mortgage_data)
         selected_mortgage = mortgage_data[dropdown_val]
+
+        # Get deposit
         deposit = f"£{int(selected_mortgage.get('deposit')) * 1000: ,}"
 
         # Get the amount of stamp duty payable
@@ -570,7 +574,15 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
         higher_rate = True if data.get("stamp_duty_rate") == "higher_rate" else False
         sdp = int(stamp_duty_payable(purchase_price, higher_rate))
 
-        return deposit, sdp
+        # Get initial payments
+        offer_payment = selected_mortgage.get("offer_payment", 0)
+        offer_payment = f"£{offer_payment :,.2f}"
+
+        # Get regular payments
+        regular_payment = selected_mortgage.get("regular_payment", 0)
+        regular_payment = f"£{regular_payment :,.2f}"
+
+        return deposit, sdp, offer_payment, regular_payment
     else:
         raise PreventUpdate
 
@@ -655,6 +667,7 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     outstanding_balance = mortgage_size - np.cumsum(principal_payments)
     return outstanding_balance
 
-# TODO: Update so takes mortgage payments as input too
+# TODO: Update so takes arrays as input including mortgage payments
+# TODO: Add docstrings and type hints
 def _get_net_savings(savable_income, rent_income, bills, housing_upkeep, rent_out):
     return savable_income + rent_income - bills - housing_upkeep - rent_out
