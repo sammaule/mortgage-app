@@ -48,17 +48,18 @@ asset_card = dbc.Card(
 liability_card = dbc.Card(
     [
         dbc.CardHeader("Liabilities"),
-        dbc.CardBody([
-            dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
-            dbc.FormGroup(
+        dbc.CardBody(
+            [
+                dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
+                dbc.FormGroup(
                     [
                         dbc.Label("Scenario name"),
                         dbc.Input(id="scenario-name", type="text", value="Scenario 1",),
                     ]
                 ),
-            dbc.Button("Save Scenario", color="primary", size="lg", id="save-scenario"),
-        ]),
-
+                dbc.Button("Save Scenario", color="primary", size="lg", id="save-scenario"),
+            ]
+        ),
     ]
 )
 
@@ -157,12 +158,7 @@ expenditure_card = dbc.Card(
                         html.H5(id="mortgage-payment-initial-allocation"),
                     ]
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Mortgage payment"),
-                        html.H5(id="mortgage-payment-allocation"),
-                    ]
-                ),
+                dbc.FormGroup([dbc.Label("Mortgage payment"), html.H5(id="mortgage-payment-allocation"),]),
                 dbc.FormGroup(
                     [
                         dbc.Label("Housing upkeep (monthly)"),
@@ -190,7 +186,7 @@ layout = html.Div(
     [
         dcc.Store(id="current-allocation-scenario", storage_type="session"),
         dbc.Row([dbc.Col(asset_card, width=6), dbc.Col(liability_card, width=6),]),
-        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(expenditure_card, width=6), ]),
+        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(expenditure_card, width=6),]),
         dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
@@ -267,10 +263,7 @@ def update_sliders(
 
 
 @app.callback(
-    [
-        Output("allocation-plot", "figure"),
-        Output("current-allocation-scenario", "data")
-    ],
+    [Output("allocation-plot", "figure"), Output("current-allocation-scenario", "data")],
     [
         Input("cash-r", "value"),
         Input("property-r", "value"),
@@ -284,10 +277,9 @@ def update_sliders(
         Input("housing-upkeep-cost", "value"),
         Input("rent-cost", "value"),
         Input("savable-income", "value"),
-        Input("allocation-scenarios", "data"),
+        Input("data-store-allocation-scenarios", "data"),
     ],
-    [State("data-store-mortgage", "data"),
-     ],
+    [State("data-store-mortgage", "data"),],
 )
 def update_plot(
     cash_r: float,
@@ -392,32 +384,41 @@ def update_plot(
     if all(v is not None for v in [savable_income, rental_income, bills, housing_upkeep, rent_out]):
 
         # Get the net income during rent period
-        net_income_rental_period = _get_net_savings(savable_income, rental_income, bills, housing_upkeep, rent_out)
+        net_income_rental_period = _get_net_savings(
+            savable_income, rental_income, bills, housing_upkeep, rent_out
+        )
         rental_income_months = min(term, rental_income_months)
         net_income_rental_period = np.array([net_income_rental_period] * rental_income_months)
         securities_array_rent = np.array(
-            [npf.fv((securities_r / 100) / 12, i, -net_income, -(securities_allocation * 1000)) for i, net_income in
-             enumerate(net_income_rental_period)]
+            [
+                npf.fv((securities_r / 100) / 12, i, -net_income, -(securities_allocation * 1000))
+                for i, net_income in enumerate(net_income_rental_period)
+            ]
         )
 
         # Get the net income during post rent period
         post_rent_months = term - rental_income_months
         if post_rent_months > 0:
-            net_income_post_rental_period = _get_net_savings(savable_income, 0, bills, housing_upkeep, rent_out)
+            net_income_post_rental_period = _get_net_savings(
+                savable_income, 0, bills, housing_upkeep, rent_out
+            )
             net_income_post_rental_period = np.array([net_income_post_rental_period] * post_rent_months)
 
-            start_balance = securities_array_rent[-1] if len(securities_array_rent) > 0 else securities_allocation * 1000
+            start_balance = (
+                securities_array_rent[-1] if len(securities_array_rent) > 0 else securities_allocation * 1000
+            )
             securities_array_post_rent = np.array(
-                [npf.fv((securities_r / 100) / 12, i, -net_income, -start_balance) for i, net_income in
-                 enumerate(net_income_post_rental_period)]
+                [
+                    npf.fv((securities_r / 100) / 12, i, -net_income, -start_balance)
+                    for i, net_income in enumerate(net_income_post_rental_period)
+                ]
             )
             securities_array = np.append(securities_array_rent, securities_array_post_rent)
         else:
             securities_array = securities_array_rent
     else:
         securities_array = np.array(
-            [npf.fv((securities_r / 100) / 12, i, -0, -(securities_allocation * 1000)) for
-             i in range(term)]
+            [npf.fv((securities_r / 100) / 12, i, -0, -(securities_allocation * 1000)) for i in range(term)]
         )
 
     fig.add_trace(
@@ -462,7 +463,7 @@ def update_plot(
     if allocation_scenarios is not None:
         allocation_scenarios = json.loads(allocation_scenarios)
         for scenario in allocation_scenarios:
-            dates = [datetime.datetime.strptime(i, "%Y-%m-%d") for i in scenario['x']]
+            dates = [datetime.datetime.strptime(i, "%Y-%m-%d") for i in scenario["x"]]
             data = dict(zip(dates, scenario["wealth"]))
             scenario_data = []
             for date in x:
@@ -478,7 +479,7 @@ def update_plot(
                     y=scenario_data,
                     fillcolor="rgba(0,176,246,0.2)",
                     line={"color": "grey", "width": 2},
-                    name=scenario['name'],
+                    name=scenario["name"],
                     hovertemplate="Date: %{x} \nTotal value: £%{y:,.3r}<extra></extra>",
                 )
             )
@@ -544,13 +545,18 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
 
 
 @app.callback(
-    [Output("property-allocation", "children"), Output("stamp-duty-cost", "value"),
-     Output("mortgage-payment-initial-allocation", "children"),
-     Output("mortgage-payment-allocation", "children"),],
+    [
+        Output("property-allocation", "children"),
+        Output("stamp-duty-cost", "value"),
+        Output("mortgage-payment-initial-allocation", "children"),
+        Output("mortgage-payment-allocation", "children"),
+    ],
     [Input("mortgage-dropdown", "value")],
     [State("data-store-mortgage", "data"), State("data-store", "data"),],
 )
-def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str) -> Tuple[str, float, str, str]:
+def update_property_allocation(
+    dropdown_val: int, mortgage_data: str, data: str
+) -> Tuple[str, float, str, str]:
     """
     Updates the property allocation to the value of the mortgage deposit selected.
 
@@ -587,20 +593,21 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
     else:
         raise PreventUpdate
 
+
 @app.callback(
-    Output("allocation-scenarios", "data"),
-    [Input("save-scenario", "n_clicks"), ],
+    Output("data-store-allocation-scenarios", "data"),
+    [Input("save-scenario", "n_clicks"),],
     [
         State("current-allocation-scenario", "data"),
-        State("allocation-scenarios", "data"),
-        State("scenario-name", "value")
+        State("data-store-allocation-scenarios", "data"),
+        State("scenario-name", "value"),
     ],
 )
 def save_mortgage_info(
     n_clicks: Optional[int],
     current_scenario: Optional[str],
     allocation_scenarios: Optional[str],
-    scenario_name: str
+    scenario_name: str,
 ) -> str:
     """
     Callback that stores the mortgage data displayed on page to the data-store-mortgage session memory on
@@ -608,7 +615,9 @@ def save_mortgage_info(
 
     Args:
         n_clicks: number of times button clicked. None if not clicked.
-        current_scenario: JSON str of currently scenario
+        current_scenario: JSON str of current scenario
+        allocation_scenarios: JSON str of all saved scenarios
+        scenario_name: user's chosen scenario name
 
     Returns:
         JSON str of data-store-mortgage session memory
@@ -660,7 +669,9 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
 
     remaining_per = np.arange(remaining_term) + 1
-    remaining_principal_payments = -1 * npf.ppmt(interest_rate, remaining_per, remaining_term, balance_after_offer)
+    remaining_principal_payments = -1 * npf.ppmt(
+        interest_rate, remaining_per, remaining_term, balance_after_offer
+    )
 
     principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
 
@@ -668,7 +679,10 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     outstanding_balance = mortgage_size - np.cumsum(principal_payments)
     return outstanding_balance
 
-def _get_net_savings(savable_income: int, rent_income: int, bills: int, housing_upkeep: int, rent_out: int) -> int:
+
+def _get_net_savings(
+    savable_income: int, rent_income: int, bills: int, housing_upkeep: int, rent_out: int
+) -> int:
     """
     Returns net monthly savings from user inputs.
 

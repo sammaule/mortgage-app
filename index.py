@@ -11,37 +11,39 @@ import budget
 import mortgage
 import asset_allocation
 
-# TODO: Update icon
+brand = "Pland"
 
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Budget", href="/budget")),
         dbc.NavItem(dbc.NavLink("Mortgage", href="/mortgage")),
-        dbc.NavItem(dbc.NavLink("Asset Allocation", href="/asset_allocation"))
+        dbc.NavItem(dbc.NavLink("Asset Allocation", href="/asset_allocation")),
     ],
-    brand="Pland",
+    brand=brand,
     brand_href="/",
 )
 
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    dcc.Store(id="data-store", storage_type="session"),
-    dcc.Store(id="data-store-mortgage", storage_type="session",
-              data=json.dumps([{
-            "deposit": 0,
-            "mortgage_size": 0,
-            "purchase_price": 0
-              }])
-              ),
-    dcc.Store(id="allocation-scenarios", storage_type="session"),
-    navbar,
-    # TODO: Add welcome to app page - with "next" button to take user to budget page
-    html.Div(id='page-content')
-])
+app.title = brand
+
+app.layout = html.Div(
+    [
+        dcc.Location(id="url", refresh=False),
+        dcc.Store(id="data-store", storage_type="session"),
+        # Store for mortgages saved on the mortgage page, initiated with no mortgage
+        dcc.Store(
+            id="data-store-mortgage",
+            storage_type="session",
+            data=json.dumps([{"deposit": 0, "mortgage_size": 0, "purchase_price": 0}]),
+        ),
+        # Store for saved scenarios on the asset allocation page, initiated with an empty list
+        dcc.Store(id="data-store-allocation-scenarios", storage_type="session", data=json.dumps([])),
+        navbar,
+        html.Div(id="page-content"),
+    ]
+)
 
 
-@app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
+@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def display_page(pathname: str) -> html.Div:
     """
     Determines which page layout to display.
@@ -52,15 +54,15 @@ def display_page(pathname: str) -> html.Div:
     Returns:
         page layout div
     """
-    if pathname == '/mortgage':
+    if pathname == "/mortgage":
         return mortgage.layout
-    elif pathname == '/budget':
+    elif pathname == "/budget":
         return budget.layout
-    elif pathname == '/asset_allocation':
+    elif pathname == "/asset_allocation":
         return asset_allocation.layout
     else:
         return budget.layout
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run_server(debug=True)
