@@ -259,9 +259,7 @@ def stamp_duty_payable(target_date: datetime.datetime, price: Union[int, float],
     rates = _get_stamp_duty_rates(target_date, stamp_duty_rates)
 
     thresholds = np.array(rates.get("thresholds"))
-    print(rate_type)
     rates = np.array(rates.get(rate_type))
-    print(rates)
 
     # Get marginal amounts payable at rate at each threshold
     marginal_amounts = thresholds - np.append(np.zeros(1), thresholds)[:-1]
@@ -318,5 +316,4 @@ def iterative_p(
         sd = stamp_duty_payable_fn(target_date, new_p, rate_type)
 
     deposit = s - sd
-    print(p)
     return deposit, p, sd
