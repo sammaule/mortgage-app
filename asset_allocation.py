@@ -17,9 +17,6 @@ import numpy_financial as npf
 from app import app
 from budget import stamp_duty_payable
 
-# TODO: Add some tooltips to explain underlying assumptions / data etc.
-# TODO: Allow choice of different target dates - update stamp duty according to selected date
-
 asset_card = dbc.Card(
     [
         dbc.CardHeader("Assets"),
@@ -579,9 +576,8 @@ def update_property_allocation(
         # Get the amount of stamp duty payable
         purchase_price = selected_mortgage.get("purchase_price") * 1000
         data = json.loads(data)
-        higher_rate = True if data.get("stamp_duty_rate") == "higher_rate" else False
         target_date = datetime.datetime.strptime(data.get("target_date"), "%Y-%m-%d")
-        sdp = int(stamp_duty_payable(target_date, purchase_price, higher_rate))
+        sdp = int(stamp_duty_payable(target_date, purchase_price, data.get("stamp_duty_rate")))
 
         # Get initial payments
         offer_payment = selected_mortgage.get("offer_payment", 0)

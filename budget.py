@@ -61,6 +61,7 @@ income_and_tax_card = dbc.Card(
                             options=[
                                 {"label": "Normal rate", "value": "normal_rate"},
                                 {"label": "Higher rate", "value": "higher_rate"},
+                                {"label": "First time buyer rate", "value": "first_time_rate"},
                             ],
                             value="higher_rate",
                         ),
@@ -156,7 +157,7 @@ layout = html.Div(
     ],
 )
 def plot_affordability(
-    savings: int, saving_rate: int, r: float, income: int, stamp_duty_rate: str, lti: float, target_date: str
+    savings: int, saving_rate: int, r: float, income: int, rate_type: str, lti: float, target_date: str
 ) -> Tuple[go.Figure, str, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
@@ -169,7 +170,7 @@ def plot_affordability(
         saving_rate: Amount saved each month
         r: interest rate (%)
         income: user input income (£ thousands)
-        stamp_duty_rate: one of ["higher_rate", "lower_rate"]
+        rate_type: type of stamp duty rate payable
         lti: loan to income ratio
         target_date: purchase date with format YYYY-MM-DD
     """
@@ -187,10 +188,8 @@ def plot_affordability(
 
         mortgage = lti * (income * 1000)
 
-        higher_rate = True if stamp_duty_rate == "higher_rate" else False
-
         budget = np.array(
-            [iterative_p(s, mortgage, stamp_duty_payable, higher_rate, target_date)[1] for s in savings_array]
+            [iterative_p(s, mortgage, stamp_duty_payable, rate_type, target_date)[1] for s in savings_array]
         )
 
         fig.add_trace(
@@ -213,7 +212,7 @@ def plot_affordability(
 
         # Work out deposit, stamp duty and max affordable price for each mortgage size
         deposit, property_value, stamp_duty = iterative_p(
-            savings_on_target_date, mortgage, stamp_duty_payable, higher_rate, target_date
+            savings_on_target_date, mortgage, stamp_duty_payable, rate_type, target_date
         )
 
         deposit_on_target_date_str = f"£{int(deposit): ,}"
@@ -227,7 +226,7 @@ def plot_affordability(
             "mortgage": mortgage,
             "value": property_value,
             "stamp_duty": stamp_duty,
-            "stamp_duty_rate": stamp_duty_rate,
+            "stamp_duty_rate": rate_type,
             "income": income,
             "target_date": target_date.strftime("%Y-%m-%d")
         }
@@ -245,14 +244,14 @@ def plot_affordability(
         raise PreventUpdate
 
 
-def stamp_duty_payable(target_date: datetime.datetime, price: Union[int, float], higher_rate: bool) -> float:
+def stamp_duty_payable(target_date: datetime.datetime, price: Union[int, float], rate_type: str) -> float:
     """
     Computes the stamp duty payable where property costs price.
 
     Args:
         target_date: user's target purchase date
         price: price of property
-        higher_rate: True if higher rate of stamp duty is payable
+        rate_type: type of stamp duty rate payable
 
     Returns:
         total stamp duty payable
@@ -260,8 +259,9 @@ def stamp_duty_payable(target_date: datetime.datetime, price: Union[int, float],
     rates = _get_stamp_duty_rates(target_date, stamp_duty_rates)
 
     thresholds = np.array(rates.get("thresholds"))
-    rates = rates.get("higher_rates") if higher_rate else rates.get("rates")
-    rates = np.array(rates)
+    print(rate_type)
+    rates = np.array(rates.get(rate_type))
+    print(rates)
 
     # Get marginal amounts payable at rate at each threshold
     marginal_amounts = thresholds - np.append(np.zeros(1), thresholds)[:-1]
@@ -292,8 +292,8 @@ def _get_stamp_duty_rates(target_date, sd_rates):
 def iterative_p(
     s: int,
     m: float,
-    stamp_duty_payable_fn: Callable[[datetime.datetime, Union[int,float], bool], float],
-    higher_rate: bool,
+    stamp_duty_payable_fn: Callable[[datetime.datetime, Union[int,float], str], float],
+    rate_type: str,
     target_date: datetime.datetime,
 ) -> Tuple[float, float, float]:
     """
@@ -303,7 +303,7 @@ def iterative_p(
         s: total savings
         m: mortgage size available
         stamp_duty_payable_fn: function to compute stamp_duty
-        higher_rate: bool to indicate which stamp duty is payable
+        rate_type: str indicating which stamp duty rate is payable
         target_date: user's target purchase date
 
     Returns:
@@ -312,10 +312,11 @@ def iterative_p(
     old_sd, sd, p = 0, 100, 0
     while abs(old_sd - sd) > 0.01:
         p = s - old_sd + m
-        sd = stamp_duty_payable_fn(target_date, p, higher_rate)
+        sd = stamp_duty_payable_fn(target_date, p, rate_type)
         new_p = s - sd + m
         old_sd = sd
-        sd = stamp_duty_payable_fn(target_date, new_p, higher_rate)
+        sd = stamp_duty_payable_fn(target_date, new_p, rate_type)
 
     deposit = s - sd
+    print(p)
     return deposit, p, sd

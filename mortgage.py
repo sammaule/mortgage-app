@@ -14,7 +14,6 @@ from dash.exceptions import PreventUpdate
 
 from app import app
 
-# TODO: Show stamp duty payable in mortgage info card
 
 first_card = dbc.Card(
     [
