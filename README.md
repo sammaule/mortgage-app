@@ -28,7 +28,7 @@ Note: stamp duty payable is taken off the deposit size.
 
 Now click through to the mortgage tab. The mortgage size and purchase price will automatically be set to the highest possible affordable value, based on the information provided in the Budget tab.
 
-You can alter these values, as well as the mortgage rates and terms until they find a monthly repayment profile that feels appropriate.
+You can alter these values, as well as the mortgage rates and terms until you find a monthly repayment profile that feels appropriate.
 
 The tool automatically calculates the total amount of interest payable over the term of the mortgage. Hopefully this can make clear the advantages of mortgages with shorter terms!
 
