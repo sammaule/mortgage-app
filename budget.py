@@ -25,13 +25,13 @@ savings_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Total savings (£ ,000)"),
-                        dbc.Input(id="current-savings", value=183, type="number"),
+                        dbc.Input(id="current-savings", value=50, type="number"),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Monthly savings rate (£)"),
-                        dbc.Input(id="saving-rate", value=800, step=10, type="number",),
+                        dbc.Input(id="saving-rate", value=500, step=10, type="number",),
                     ]
                 ),
                 dbc.FormGroup(
@@ -51,7 +51,7 @@ income_and_tax_card = dbc.Card(
         dbc.CardBody(
             [
                 dbc.FormGroup(
-                    [dbc.Label("Income (£ ,000)"), dbc.Input(id="income", value=60, type="number"),]
+                    [dbc.Label("Income (£ ,000)"), dbc.Input(id="income", value=25, type="number"),]
                 ),
                 dbc.FormGroup(
                     [
