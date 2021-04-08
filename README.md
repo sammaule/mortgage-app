@@ -14,7 +14,7 @@ The three tabs at the top of the page should be completed sequentially: budget, 
 
 ### Budget tab
 
-The budget tab helps you understand the highest house price they are likely to be able to afford.
+The budget tab helps you understand the highest house price you are likely to be able to afford.
 
 To use the page, fill in your details in the "Savings" and "Other info" cards. The LTI you are able to borrow will vary according to your personal circumstances, but something in the range of 4 - 4.5 is common.
 
