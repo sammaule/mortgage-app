@@ -1,17 +1,24 @@
 ## Pland
 
-Pland is a project developed to help people to budget appropriately when purchasing a home.
-It is currently hosted at http://home-pland.herokuapp.com/. The following article explains how to use the app.
+Pland is a project developed to help you budget appropriately when planning to purchase a home. It helps you:
+
+- Understand what you can afford
+- Choose a mortgage that is right for you
+- Compare the impact of buying a house vs. investing elsewhere on your wealth
+
+You can view the app at http://home-pland.herokuapp.com/. Open the app and follow the tutorial below on how to use it.
+
+### Tutorial
 
 The three tabs at the top of the page should be completed sequentially: budget, mortgage and asset allocation.
 
 ### Budget tab
 
-The budget tab enables users to understand the highest house price they are likely to be able to afford.
+The budget tab helps you understand the highest house price they are likely to be able to afford.
 
-To use the page, fill in your details in the "Savings" and "Other info" cards.
+To use the page, fill in your details in the "Savings" and "Other info" cards. The LTI you are able to borrow will vary according to your personal circumstances, but something in the range of 4 - 4.5 is common.
 
-Once complete the 'Maximum affordability breakdown' card will display the likely maximum affordable value as well as the breakdown between mortgage, deposit and stamp duty.
+Once complete the 'Maximum affordability breakdown' card will display the likely maximum affordable value as well as the breakdown between mortgage, deposit and stamp duty. The chart in the bottom right shows how this varies up to your preferred purchase date.
 
 ![Budget tab](images/budget.png)
 
@@ -21,17 +28,17 @@ Note: stamp duty payable is taken off the deposit size.
 
 Now click through to the mortgage tab. The mortgage size and purchase price will automatically be set to the highest possible affordable value, based on the information provided in the Budget tab.
 
-Users can alter these values, as well as the mortgage rates and terms until they find a monthly repayment profile that feels appropriate.
+You can alter these values, as well as the mortgage rates and terms until they find a monthly repayment profile that feels appropriate.
 
 The tool automatically calculates the total amount of interest payable over the term of the mortgage. Hopefully this can make clear the advantages of mortgages with shorter terms!
 
-Once the user is happy with the mortgage created, the 'Save mortgage' button should be clicked. This will save the mortgage details for comparisons on the asset allocation page.
+Once you are happy with the mortgage created, the 'Save mortgage' button should be clicked. This will save the mortgage details for comparisons on the asset allocation page.
 
-Create several mortgages at once and these can be compared against one another on the asset allocation page.
+If you like, create several mortgages at once as you will be able to compare these against one another on the asset allocation page.
 
 ### Asset allocation
 
-The asset allocation tab can be used to compare different potential investment allocation against one another to see what the potential impact on total wealth is likely to be.
+The asset allocation tab can be used to compare different potential investment allocations against one another to see what the potential impact on total wealth is likely to be.
 
 This can help you to work out if buying a house makes sense from a financial perspective compared to investing your deposit money elsewhere.
 
