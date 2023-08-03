@@ -2,15 +2,14 @@
 import datetime
 import json
 from bisect import bisect
-from typing import Tuple, Callable, Union
+from typing import Callable, Tuple, Union
 
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
 import numpy as np
 import numpy_financial as npf
 import pandas as pd
 import plotly.graph_objects as go
+from dash import dcc, html
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
@@ -22,23 +21,21 @@ savings_card = dbc.Card(
         dbc.CardHeader("Savings"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Total savings (£ ,000)"),
-                        dbc.Input(id="current-savings", value=50, type="number"),
-                    ]
+                dbc.Label("Total savings (£ ,000)"),
+                dbc.Input(id="current-savings", value=50, type="number"),
+                dbc.Label("Monthly savings rate (£)"),
+                dbc.Input(
+                    id="saving-rate",
+                    value=500,
+                    step=10,
+                    type="number",
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Monthly savings rate (£)"),
-                        dbc.Input(id="saving-rate", value=500, step=10, type="number",),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Savings interest (% annual)"),
-                        dbc.Input(id="savings-interest", value=0.5, step=0.01, type="number",),
-                    ]
+                dbc.Label("Savings interest (% annual)"),
+                dbc.Input(
+                    id="savings-interest",
+                    value=0.5,
+                    step=0.01,
+                    type="number",
                 ),
             ]
         ),
@@ -50,48 +47,38 @@ income_and_tax_card = dbc.Card(
         dbc.CardHeader("Other info"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [dbc.Label("Income (£ ,000)"), dbc.Input(id="income", value=25, type="number"),]
+                dbc.Label("Income (£ ,000)"),
+                dbc.Input(id="income", value=25, type="number"),
+                dbc.Label("Stamp Duty rate"),
+                dbc.Select(
+                    id="stamp-duty-rate",
+                    options=[
+                        {"label": "Normal rate", "value": "normal_rate"},
+                        {"label": "Higher rate", "value": "higher_rate"},
+                        {
+                            "label": "First time buyer rate",
+                            "value": "first_time_rate",
+                        },
+                    ],
+                    value="higher_rate",
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Stamp Duty rate"),
-                        dbc.Select(
-                            id="stamp-duty-rate",
-                            options=[
-                                {"label": "Normal rate", "value": "normal_rate"},
-                                {"label": "Higher rate", "value": "higher_rate"},
-                                {"label": "First time buyer rate", "value": "first_time_rate"},
-                            ],
-                            value="higher_rate",
-                        ),
-                    ]
+                dbc.Label("Loan to income ratio"),
+                dcc.Slider(
+                    id="lti",
+                    value=4,
+                    marks={3: "3", 3.5: "3.5", 4: "4", 4.5: "4.5", 5: "5"},
+                    step=0.1,
+                    min=3,
+                    max=5,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Loan to income ratio"),
-                        dcc.Slider(
-                            id="lti",
-                            value=4,
-                            marks={3: "3", 3.5: "3.5", 4: "4", 4.5: "4.5", 5: "5"},
-                            step=0.1,
-                            min=3,
-                            max=5,
-                        ),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Target purchase date"),
-                        html.Br(),
-                        html.Br(),
-                        dcc.DatePickerSingle(
-                            id="target-purchase-date",
-                            date=datetime.datetime.today().date() + datetime.timedelta(days=9 * 30),
-                            min_date_allowed=datetime.datetime.today(),
-                            display_format="DD/MM/YYYY",
-                        ),
-                    ]
+                dbc.Label("Target purchase date"),
+                html.Br(),
+                html.Br(),
+                dcc.DatePickerSingle(
+                    id="target-purchase-date",
+                    date=datetime.datetime.today().date() + datetime.timedelta(days=9 * 30),
+                    min_date_allowed=datetime.datetime.today(),
+                    display_format="DD/MM/YYYY",
                 ),
             ]
         ),
@@ -104,11 +91,19 @@ budget_results_card = dbc.Card(
         dbc.CardBody(
             [
                 html.Div(
-                    [dbc.Label("Maximum affordable value:"), html.H5(id="property-value-on-target-date"),]
+                    [
+                        dbc.Label("Maximum affordable value:"),
+                        html.H5(id="property-value-on-target-date"),
+                    ]
                 ),
                 html.Div([dbc.Label("Mortgage size:"), html.H5(id="mortgage-on-target-date")]),
                 html.Div([dbc.Label("Deposit size:"), html.H5(id="deposit-on-target-date")]),
-                html.Div([dbc.Label("Stamp duty payable:"), html.H5(id="stamp-duty-on-target-date")]),
+                html.Div(
+                    [
+                        dbc.Label("Stamp duty payable:"),
+                        html.H5(id="stamp-duty-on-target-date"),
+                    ]
+                ),
             ]
         ),
     ]
@@ -157,7 +152,13 @@ layout = html.Div(
     ],
 )
 def plot_affordability(
-    savings: int, saving_rate: int, r: float, income: int, rate_type: str, lti: float, target_date: str
+    savings: int,
+    saving_rate: int,
+    r: float,
+    income: int,
+    rate_type: str,
+    lti: float,
+    target_date: str,
 ) -> Tuple[go.Figure, str, str, str, str, str]:
     """
     Callback to populate data in the savings plot according to the input values entered by user.
@@ -182,15 +183,11 @@ def plot_affordability(
         periods = (target_date.year - start_date.year) * 12 + (target_date.month - start_date.month) + 1
         x = pd.date_range(datetime.datetime.now(), periods=periods, freq="M")
 
-        savings_array = np.array(
-            [npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000)) for i in range(periods)]
-        )
+        savings_array = np.array([npf.fv((r / 100) / 12, i, -saving_rate, -(savings * 1000)) for i in range(periods)])
 
         mortgage = lti * (income * 1000)
 
-        budget = np.array(
-            [iterative_p(s, mortgage, stamp_duty_payable, rate_type, target_date)[1] for s in savings_array]
-        )
+        budget = np.array([iterative_p(s, mortgage, stamp_duty_payable, rate_type, target_date)[1] for s in savings_array])
 
         fig.add_trace(
             go.Scatter(
@@ -211,9 +208,7 @@ def plot_affordability(
         savings_on_target_date = npf.fv((r / 100) / 12, num_months, -saving_rate, -(savings * 1000))
 
         # Work out deposit, stamp duty and max affordable price for each mortgage size
-        deposit, property_value, stamp_duty = iterative_p(
-            savings_on_target_date, mortgage, stamp_duty_payable, rate_type, target_date
-        )
+        deposit, property_value, stamp_duty = iterative_p(savings_on_target_date, mortgage, stamp_duty_payable, rate_type, target_date)
 
         deposit_on_target_date_str = f"£{int(deposit): ,}"
         mortgage_on_target_date_str = f"£{int(mortgage): ,}"
@@ -228,7 +223,7 @@ def plot_affordability(
             "stamp_duty": stamp_duty,
             "stamp_duty_rate": rate_type,
             "income": income,
-            "target_date": target_date.strftime("%Y-%m-%d")
+            "target_date": target_date.strftime("%Y-%m-%d"),
         }
         data_storage = json.dumps(data_storage)
 
@@ -277,7 +272,7 @@ def stamp_duty_payable(target_date: datetime.datetime, price: Union[int, float],
 
 
 def _get_stamp_duty_rates(target_date, sd_rates):
-    """ Returns dict of rates and thresholds for planned purchase date from config stamp duty rates."""
+    """Returns dict of rates and thresholds for planned purchase date from config stamp duty rates."""
     for rates in sd_rates:
         start_date, end_date = rates.get("date_range")
         if start_date <= target_date <= end_date:
@@ -290,7 +285,7 @@ def _get_stamp_duty_rates(target_date, sd_rates):
 def iterative_p(
     s: int,
     m: float,
-    stamp_duty_payable_fn: Callable[[datetime.datetime, Union[int,float], str], float],
+    stamp_duty_payable_fn: Callable[[datetime.datetime, Union[int, float], str], float],
     rate_type: str,
     target_date: datetime.datetime,
 ) -> Tuple[float, float, float]:

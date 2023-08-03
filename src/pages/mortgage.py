@@ -1,70 +1,61 @@
 """Contains layout and callbacks for the mortgage page of the app."""
 import json
-import re
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output, State
-import plotly.graph_objects as go
 import numpy as np
 import numpy_financial as npf
+import plotly.graph_objects as go
+from dash import dcc, html
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
 from app import app
-
 
 first_card = dbc.Card(
     [
         dbc.CardHeader("Mortgage details:"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [dbc.Label("Deposit size (£ ,000)"), dbc.Input(id="deposit-size", type="number"), ]
+                dbc.Label("Deposit size (£ ,000)"),
+                dbc.Input(id="deposit-size", type="number"),
+                dbc.Label("Purchase price (£ ,000)"),
+                dbc.Input(id="purchase-price", type="number"),
+                dbc.Label("Offer term (years): "),
+                dcc.Slider(
+                    id="offer-term",
+                    value=3,
+                    marks={i: f"{i}" for i in range(0, 6)},
+                    step=1,
+                    min=0,
+                    max=5,
                 ),
-                dbc.FormGroup(
-                    [dbc.Label("Purchase price (£ ,000)"), dbc.Input(id="purchase-price", type="number"), ]
+                dbc.Label("Mortgage term (years): "),
+                dcc.Slider(
+                    id="mortgage-term",
+                    value=20,
+                    marks={i: f"{i}" for i in range(5, 41, 5)},
+                    step=1,
+                    min=5,
+                    max=40,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Offer term (years): "),
-                        dcc.Slider(
-                            id="offer-term",
-                            value=3,
-                            marks={i: f"{i}" for i in range(0, 6)},
-                            step=1,
-                            min=0,
-                            max=5,
-                        ),
-                    ]
+                dbc.Label("Initial interest rate (%): "),
+                dbc.Input(
+                    id="initial-interest-rate",
+                    value=1.05,
+                    type="number",
+                    min=0,
+                    max=100,
+                    step=0.01,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Mortgage term (years): "),
-                        dcc.Slider(
-                            id="mortgage-term",
-                            value=20,
-                            marks={i: f"{i}" for i in range(5, 41, 5)},
-                            step=1,
-                            min=5,
-                            max=40,
-                        ),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Initial interest rate (%): "),
-                        dbc.Input(
-                            id="initial-interest-rate", value=1.05, type="number", min=0, max=100, step=0.01,
-                        ),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Interest rate (%): "),
-                        dbc.Input(id="interest-rate", value=3.00, type="number", min=0, max=100, step=0.01,),
-                    ]
+                dbc.Label("Interest rate (%): "),
+                dbc.Input(
+                    id="interest-rate",
+                    value=3.00,
+                    type="number",
+                    min=0,
+                    max=100,
+                    step=0.01,
                 ),
             ]
         ),
@@ -81,13 +72,21 @@ second_card = dbc.Card(
                 html.Div([dbc.Label("LTV:"), html.H5(id="ltv")]),
                 html.Div([dbc.Label("LTI:"), html.H5(id="lti-mortgage")]),
                 html.Div(
-                    [dbc.Label("Monthly payment (offer period):"), html.H5(id="monthly-payment-offer"), ]
+                    [
+                        dbc.Label("Monthly payment (offer period):"),
+                        html.H5(id="monthly-payment-offer"),
+                    ]
                 ),
                 html.Div([dbc.Label("Monthly payment:"), html.H5(id="monthly-payment")]),
                 html.Br(),
                 html.Div(
                     [
-                        dbc.Button("Save mortgage", color="primary", size="lg", id="save-button-mortgage"),
+                        dbc.Button(
+                            "Save mortgage",
+                            color="primary",
+                            size="lg",
+                            id="save-button-mortgage",
+                        ),
                         dbc.Modal(
                             [
                                 dbc.ModalHeader("Mortgage saved"),
@@ -125,7 +124,10 @@ layout = html.Div(
 
 
 @app.callback(
-    [Output("deposit-size", "value"), Output("purchase-price", "value"), ],
+    [
+        Output("deposit-size", "value"),
+        Output("purchase-price", "value"),
+    ],
     [Input("url", "pathname")],
     [State("data-store", "data")],
 )
@@ -149,7 +151,11 @@ def fill_data_values(url, data) -> Tuple[float, float]:
 
 
 @app.callback(
-    [Output("ltv", "children"), Output("mortgage-size", "children"), Output("lti-mortgage", "children")],
+    [
+        Output("ltv", "children"),
+        Output("mortgage-size", "children"),
+        Output("lti-mortgage", "children"),
+    ],
     [Input("deposit-size", "value"), Input("purchase-price", "value")],
     [State("data-store", "data")],
 )
@@ -185,7 +191,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
         Output("total-repaid", "children"),
         Output("monthly-payment-offer", "children"),
         Output("monthly-payment", "children"),
-        Output("mortgage-payments-store", "data")
+        Output("mortgage-payments-store", "data"),
     ],
     [
         Input("deposit-size", "value"),
@@ -197,7 +203,12 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
     ],
 )
 def plot_monthly_repayments(
-    deposit: int, purchase_price: int, term: int, interest_rate: float, offer_term: int, offer_rate: float,
+    deposit: int,
+    purchase_price: int,
+    term: int,
+    interest_rate: float,
+    offer_term: int,
+    offer_rate: float,
 ) -> Tuple[go.Figure, str, str, str, str]:
     """
     Callback to plot the payment schedule and populate the total interest repaid.
@@ -214,7 +225,6 @@ def plot_monthly_repayments(
 
     """
     if all(v is not None for v in [deposit, purchase_price, interest_rate, offer_term, offer_rate]):
-
         # Convert inputs to correct units
         total_borrowed = (purchase_price - deposit) * 1000
         offer_rate = (offer_rate / 12) / 100  # monthly interest rate
@@ -254,7 +264,6 @@ def plot_monthly_repayments(
                     name="Principal payments",
                 ),
             ],
-
         )
         figure.update_layout(barmode="stack")
         figure.update_xaxes(title_text="Months")
@@ -266,9 +275,7 @@ def plot_monthly_repayments(
         offer_pmt = f"£{offer_payments :,.2f}"
         regular_pmt = f"£{remaining_payments :,.2f}"
 
-        mortgage_payments_data = json.dumps({
-            "offer_payments": offer_payments,
-            "regular_payments": remaining_payments})
+        mortgage_payments_data = json.dumps({"offer_payments": offer_payments, "regular_payments": remaining_payments})
         return figure, interest_paid, offer_pmt, regular_pmt, mortgage_payments_data
     else:
         raise PreventUpdate
@@ -276,7 +283,9 @@ def plot_monthly_repayments(
 
 @app.callback(
     [Output("data-store-mortgage", "data"), Output("mortgage-saved-popup", "is_open")],
-    [Input("save-button-mortgage", "n_clicks"), ],
+    [
+        Input("save-button-mortgage", "n_clicks"),
+    ],
     [
         State("deposit-size", "value"),
         State("purchase-price", "value"),

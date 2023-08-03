@@ -2,14 +2,13 @@
 import json
 
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc, html
 from dash.dependencies import Input, Output
 
+import pages.asset_allocation as asset_allocation
+import pages.budget as budget
+import pages.mortgage as mortgage
 from app import app
-import budget
-import mortgage
-import asset_allocation
 
 brand = "Pland"
 
@@ -36,7 +35,11 @@ app.layout = html.Div(
             data=json.dumps([{"deposit": 0, "mortgage_size": 0, "purchase_price": 0}]),
         ),
         # Store for saved scenarios on the asset allocation page, initiated with an empty list
-        dcc.Store(id="data-store-allocation-scenarios", storage_type="session", data=json.dumps([])),
+        dcc.Store(
+            id="data-store-allocation-scenarios",
+            storage_type="session",
+            data=json.dumps([]),
+        ),
         navbar,
         html.Div(id="page-content"),
     ]

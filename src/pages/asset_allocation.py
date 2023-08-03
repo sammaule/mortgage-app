@@ -2,41 +2,48 @@
 import datetime
 import json
 import math
-from typing import Optional, Tuple, Dict, Union, List
+from typing import Dict, List, Optional, Tuple, Union
 
-import dash_html_components as html
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
-import plotly.graph_objects as go
-import pandas as pd
 import numpy as np
 import numpy_financial as npf
+import pandas as pd
+import plotly.graph_objects as go
+from dash import dcc, html
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 
 from app import app
-from budget import stamp_duty_payable
+from pages.budget import stamp_duty_payable
 
 asset_card = dbc.Card(
     [
         dbc.CardHeader("Assets"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Total wealth (£ ,000)"),
-                        dbc.Input(id="total-wealth-allocation", type="number", min=0, step=1, max=100000,),
-                    ]
+                dbc.Label("Total wealth (£ ,000)"),
+                dbc.Input(
+                    id="total-wealth-allocation",
+                    type="number",
+                    min=0,
+                    step=1,
+                    max=100000,
                 ),
-                dbc.FormGroup([dbc.Label("Property allocation"), html.H5(id="property-allocation"),]),
-                dbc.FormGroup(
-                    [dbc.Label("Cash allocation"), dcc.Slider(id="cash-allocation", min=0, step=1, value=0,),]
+                dbc.Label("Property allocation"),
+                html.H5(id="property-allocation"),
+                dbc.Label("Cash allocation"),
+                dcc.Slider(
+                    id="cash-allocation",
+                    min=0,
+                    step=1,
+                    value=0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Securities allocation"),
-                        dcc.Slider(id="securities-allocation", min=0, step=1, value=0,),
-                    ]
+                dbc.Label("Securities allocation"),
+                dcc.Slider(
+                    id="securities-allocation",
+                    min=0,
+                    step=1,
+                    value=0,
                 ),
             ]
         ),
@@ -48,16 +55,17 @@ liability_card = dbc.Card(
         dbc.CardHeader("Liabilities"),
         dbc.CardBody(
             [
-                dbc.FormGroup([dbc.Label("Mortgage"), dcc.Dropdown(id="mortgage-dropdown")]),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Scenario name"),
-                        dbc.Input(id="scenario-name", type="text", value="Scenario 1",),
-                    ]
+                dbc.Label("Mortgage"),
+                dcc.Dropdown(id="mortgage-dropdown"),
+                dbc.Label("Scenario name"),
+                dbc.Input(
+                    id="scenario-name",
+                    type="text",
+                    value="Scenario 1",
                 ),
-                dbc.Button("Save Scenario", color="primary", size="lg", id="save-scenario"),
             ]
         ),
+        dbc.Button("Save Scenario", color="primary", size="lg", id="save-scenario"),
     ]
 )
 
@@ -66,58 +74,57 @@ income_card = dbc.Card(
         dbc.CardHeader("Income"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Property (% annual)"),
-                        dbc.Input(id="property-r", type="number", min=0, step=0.1, max=1000, value=2.0,),
-                    ]
+                dbc.Label("Property (% annual)"),
+                dbc.Input(
+                    id="property-r",
+                    type="number",
+                    min=0,
+                    step=0.1,
+                    max=1000,
+                    value=2.0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Cash (% annual)"),
-                        dbc.Input(id="cash-r", type="number", min=0, step=0.1, max=1000, value=0.5,),
-                    ]
+                dbc.Label("Cash (% annual)"),
+                dbc.Input(
+                    id="cash-r",
+                    type="number",
+                    min=0,
+                    step=0.1,
+                    max=1000,
+                    value=0.5,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Securities (% annual)"),
-                        dbc.Input(id="securities-r", type="number", min=0, step=0.1, max=1000, value=4.0,),
-                    ]
+                dbc.Label("Securities (% annual)"),
+                dbc.Input(
+                    id="securities-r",
+                    type="number",
+                    min=0,
+                    step=0.1,
+                    max=1000,
+                    value=4.0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Savable income (monthly)"),
-                        dbc.Input(id="savable-income", type="number", min=0, step=100),
-                    ]
-                ),
+                dbc.Label("Savable income (monthly)"),
+                dbc.Input(id="savable-income", type="number", min=0, step=100),
                 dbc.Form(
                     [
-                        dbc.FormGroup(
-                            [
-                                dbc.Label("Rental income (monthly)", className="mr-2"),
-                                dbc.Input(
-                                    id="rental-income", type="number", min=0, step=1, max=10000, value=0,
-                                ),
-                            ],
-                            className="mr-3",
+                        dbc.Label("Rental income (monthly)", className="mr-2"),
+                        dbc.Input(
+                            id="rental-income",
+                            type="number",
+                            min=0,
+                            step=1,
+                            max=10000,
+                            value=0,
                         ),
-                        dbc.FormGroup(
-                            [
-                                dbc.Label("for", className="mr-2"),
-                                dbc.Input(
-                                    id="rental-income-months",
-                                    type="number",
-                                    min=0,
-                                    step=1,
-                                    max=10000,
-                                    value=0,
-                                ),
-                                dbc.Label("months", className="ml-2"),
-                            ],
-                            className="mr-3",
+                        dbc.Label("for", className="mr-2"),
+                        dbc.Input(
+                            id="rental-income-months",
+                            type="number",
+                            min=0,
+                            step=1,
+                            max=10000,
+                            value=0,
                         ),
+                        dbc.Label("months", className="ml-2"),
                     ],
-                    inline=True,
                 ),
             ]
         ),
@@ -130,46 +137,53 @@ expenditure_card = dbc.Card(
         dbc.CardHeader("Expenditure"),
         dbc.CardBody(
             [
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Mortgage fees"),
-                        dbc.Input(
-                            id="mortgage-fees-cost", type="number", min=0, step=10, max=10000, value=0,
-                        ),
-                    ]
+                dbc.Label("Mortgage fees"),
+                dbc.Input(
+                    id="mortgage-fees-cost",
+                    type="number",
+                    min=0,
+                    step=10,
+                    max=10000,
+                    value=0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Stamp duty"),
-                        dbc.Input(id="stamp-duty-cost", type="number", min=0, step=100, value=0,),
-                    ]
+                dbc.Label("Stamp duty"),
+                dbc.Input(
+                    id="stamp-duty-cost",
+                    type="number",
+                    min=0,
+                    step=100,
+                    value=0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Rent (monthly)"),
-                        dbc.Input(id="rent-cost", type="number", min=0, step=10, max=10000, value=0,),
-                    ]
+                dbc.Label("Rent (monthly)"),
+                dbc.Input(
+                    id="rent-cost",
+                    type="number",
+                    min=0,
+                    step=10,
+                    max=10000,
+                    value=0,
                 ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Mortgage payment (initial)"),
-                        html.H5(id="mortgage-payment-initial-allocation"),
-                    ]
+                dbc.Label("Mortgage payment (initial)"),
+                html.H5(id="mortgage-payment-initial-allocation"),
+                dbc.Label("Mortgage payment"),
+                html.H5(id="mortgage-payment-allocation"),
+                dbc.Label("Housing upkeep (monthly)"),
+                dbc.Input(
+                    id="housing-upkeep-cost",
+                    type="number",
+                    min=0,
+                    step=10,
+                    max=10000,
+                    value=0,
                 ),
-                dbc.FormGroup([dbc.Label("Mortgage payment"), html.H5(id="mortgage-payment-allocation"),]),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Housing upkeep (monthly)"),
-                        dbc.Input(
-                            id="housing-upkeep-cost", type="number", min=0, step=10, max=10000, value=0,
-                        ),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Bills (monthly)"),
-                        dbc.Input(id="bills-cost", type="number", min=0, step=10, max=10000, value=0,),
-                    ]
+                dbc.Label("Bills (monthly)"),
+                dbc.Input(
+                    id="bills-cost",
+                    type="number",
+                    min=0,
+                    step=10,
+                    max=10000,
+                    value=0,
                 ),
             ]
         ),
@@ -177,14 +191,27 @@ expenditure_card = dbc.Card(
 )
 
 chart_card = dbc.Card(
-    [dbc.CardHeader("Asset value over time"), dbc.CardBody([dcc.Graph(id="allocation-plot")]),]
+    [
+        dbc.CardHeader("Asset value over time"),
+        dbc.CardBody([dcc.Graph(id="allocation-plot")]),
+    ]
 )
 
 layout = html.Div(
     [
         dcc.Store(id="current-allocation-scenario", storage_type="session"),
-        dbc.Row([dbc.Col(asset_card, width=6), dbc.Col(liability_card, width=6),]),
-        dbc.Row([dbc.Col(income_card, width=6), dbc.Col(expenditure_card, width=6),]),
+        dbc.Row(
+            [
+                dbc.Col(asset_card, width=6),
+                dbc.Col(liability_card, width=6),
+            ]
+        ),
+        dbc.Row(
+            [
+                dbc.Col(income_card, width=6),
+                dbc.Col(expenditure_card, width=6),
+            ]
+        ),
         dbc.Row([dbc.Col(chart_card, width=12)]),
     ]
 )
@@ -205,7 +232,9 @@ layout = html.Div(
         Input("mortgage-fees-cost", "value"),
         Input("mortgage-dropdown", "value"),
     ],
-    [State("data-store-mortgage", "data"),],
+    [
+        State("data-store-mortgage", "data"),
+    ],
 )
 def update_sliders(
     total_wealth: Optional[int],
@@ -244,7 +273,7 @@ def update_sliders(
         # Get the step sizes for the marks
         order_of_magnitude = math.floor(math.log10(max_cash + max_securities)) - 1
         multiple = int(str(total_wealth)[0]) * 10
-        step_size = int(multiple ** order_of_magnitude) if order_of_magnitude >= 0 else 1
+        step_size = int(multiple**order_of_magnitude) if order_of_magnitude >= 0 else 1
 
         # Get a dictionary of markers in correct format
         cash_marks = {i: f"{i: ,}" for i in range(0, max_cash + step_size, step_size)}
@@ -261,7 +290,10 @@ def update_sliders(
 
 
 @app.callback(
-    [Output("allocation-plot", "figure"), Output("current-allocation-scenario", "data")],
+    [
+        Output("allocation-plot", "figure"),
+        Output("current-allocation-scenario", "data"),
+    ],
     [
         Input("cash-r", "value"),
         Input("property-r", "value"),
@@ -277,7 +309,9 @@ def update_sliders(
         Input("savable-income", "value"),
         Input("data-store-allocation-scenarios", "data"),
     ],
-    [State("data-store-mortgage", "data"),],
+    [
+        State("data-store-mortgage", "data"),
+    ],
 )
 def update_plot(
     cash_r: float,
@@ -362,9 +396,7 @@ def update_plot(
     )
 
     purchase_price = mortgage.get("purchase_price")
-    property_array = np.array(
-        [npf.fv((property_r / 100) / 12, i, 0, -(purchase_price * 1000)) for i in range(term)]
-    )
+    property_array = np.array([npf.fv((property_r / 100) / 12, i, 0, -(purchase_price * 1000)) for i in range(term)])
 
     fig.add_trace(
         go.Scatter(
@@ -380,16 +412,18 @@ def update_plot(
     # TODO: Fix bug where not updated if rent isn't set to a number
     # Assumes that all net income is reinvested in securities
     if all(v is not None for v in [savable_income, rental_income, bills, housing_upkeep, rent_out]):
-
         # Get the net income during rent period
-        net_income_rental_period = _get_net_savings(
-            savable_income, rental_income, bills, housing_upkeep, rent_out
-        )
+        net_income_rental_period = _get_net_savings(savable_income, rental_income, bills, housing_upkeep, rent_out)
         rental_income_months = min(term, rental_income_months)
         net_income_rental_period = np.array([net_income_rental_period] * rental_income_months)
         securities_array_rent = np.array(
             [
-                npf.fv((securities_r / 100) / 12, i, -net_income, -(securities_allocation * 1000))
+                npf.fv(
+                    (securities_r / 100) / 12,
+                    i,
+                    -net_income,
+                    -(securities_allocation * 1000),
+                )
                 for i, net_income in enumerate(net_income_rental_period)
             ]
         )
@@ -397,27 +431,18 @@ def update_plot(
         # Get the net income during post rent period
         post_rent_months = term - rental_income_months
         if post_rent_months > 0:
-            net_income_post_rental_period = _get_net_savings(
-                savable_income, 0, bills, housing_upkeep, rent_out
-            )
+            net_income_post_rental_period = _get_net_savings(savable_income, 0, bills, housing_upkeep, rent_out)
             net_income_post_rental_period = np.array([net_income_post_rental_period] * post_rent_months)
 
-            start_balance = (
-                securities_array_rent[-1] if len(securities_array_rent) > 0 else securities_allocation * 1000
-            )
+            start_balance = securities_array_rent[-1] if len(securities_array_rent) > 0 else securities_allocation * 1000
             securities_array_post_rent = np.array(
-                [
-                    npf.fv((securities_r / 100) / 12, i, -net_income, -start_balance)
-                    for i, net_income in enumerate(net_income_post_rental_period)
-                ]
+                [npf.fv((securities_r / 100) / 12, i, -net_income, -start_balance) for i, net_income in enumerate(net_income_post_rental_period)]
             )
             securities_array = np.append(securities_array_rent, securities_array_post_rent)
         else:
             securities_array = securities_array_rent
     else:
-        securities_array = np.array(
-            [npf.fv((securities_r / 100) / 12, i, -0, -(securities_allocation * 1000)) for i in range(term)]
-        )
+        securities_array = np.array([npf.fv((securities_r / 100) / 12, i, -0, -(securities_allocation * 1000)) for i in range(term)])
 
     fig.add_trace(
         go.Scatter(
@@ -488,10 +513,12 @@ def update_plot(
 
 
 @app.callback(
-    Output("total-wealth-allocation", "value"), [Input("url", "pathname")], [State("data-store", "data")],
+    Output("total-wealth-allocation", "value"),
+    [Input("url", "pathname")],
+    [State("data-store", "data")],
 )
 def fill_wealth_value(url: str, data: str) -> int:
-    """"
+    """ "
     Returns the total savings value defined by user on budget page, rounded to the nearest thousand.
 
     Args:
@@ -550,11 +577,12 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
         Output("mortgage-payment-allocation", "children"),
     ],
     [Input("mortgage-dropdown", "value")],
-    [State("data-store-mortgage", "data"), State("data-store", "data"),],
+    [
+        State("data-store-mortgage", "data"),
+        State("data-store", "data"),
+    ],
 )
-def update_property_allocation(
-    dropdown_val: int, mortgage_data: str, data: str
-) -> Tuple[str, float, str, str]:
+def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str) -> Tuple[str, float, str, str]:
     """
     Updates the property allocation to the value of the mortgage deposit selected.
 
@@ -594,7 +622,9 @@ def update_property_allocation(
 
 @app.callback(
     Output("data-store-allocation-scenarios", "data"),
-    [Input("save-scenario", "n_clicks"),],
+    [
+        Input("save-scenario", "n_clicks"),
+    ],
     [
         State("current-allocation-scenario", "data"),
         State("data-store-allocation-scenarios", "data"),
@@ -667,9 +697,7 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
     balance_after_offer = mortgage_size - np.sum(offer_principal_payments)
 
     remaining_per = np.arange(remaining_term) + 1
-    remaining_principal_payments = -1 * npf.ppmt(
-        interest_rate, remaining_per, remaining_term, balance_after_offer
-    )
+    remaining_principal_payments = -1 * npf.ppmt(interest_rate, remaining_per, remaining_term, balance_after_offer)
 
     principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
 
@@ -679,7 +707,11 @@ def _get_mortgage_balance(mortgage: Dict[str, Union[int, float]]) -> np.ndarray:
 
 
 def _get_net_savings(
-    savable_income: int, rent_income: int, bills: int, housing_upkeep: int, rent_out: int
+    savable_income: int,
+    rent_income: int,
+    bills: int,
+    housing_upkeep: int,
+    rent_out: int,
 ) -> int:
     """
     Returns net monthly savings from user inputs.
