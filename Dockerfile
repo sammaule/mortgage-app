@@ -8,6 +8,6 @@ RUN pip3 install -r requirements.txt
 
 # Copy source code
 WORKDIR /src
-COPY ./src .`
+COPY ./src .
 
 CMD gunicorn --bind 0.0.0.0:8000 app:server
