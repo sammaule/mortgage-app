@@ -4,6 +4,7 @@ import json
 from bisect import bisect
 from typing import Callable, Tuple, Union
 
+from dash import callback
 import dash_bootstrap_components as dbc
 import numpy as np
 import numpy_financial as npf
@@ -13,7 +14,6 @@ from dash import dcc, html
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
-from app import app
 from config import stamp_duty_rates
 
 savings_card = dbc.Card(
@@ -132,7 +132,7 @@ layout = html.Div(
 )
 
 
-@app.callback(
+@callback(
     [
         Output("budget-plot", "figure"),
         Output("deposit-on-target-date", "children"),

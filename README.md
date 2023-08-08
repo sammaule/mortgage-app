@@ -20,7 +20,7 @@ To use the page, fill in your details in the "Savings" and "Other info" cards. T
 
 Once complete the 'Maximum affordability breakdown' card will display the likely maximum affordable value as well as the breakdown between mortgage, deposit and stamp duty. The chart in the bottom right shows how this varies up to your preferred purchase date.
 
-![Budget tab](images/budget.png)
+![Budget tab](assets/budget.png)
 
 Note: stamp duty payable is taken off the deposit size.
 
@@ -54,7 +54,7 @@ Once you are happy with a scenario, enter a name for the scenario and click "Sav
 
 You can then generate as many new scenarios as you like, and compare how the different strategies are likely to affect your overall wealth over time.
 
-![Asset allocation tab](images/asset_allocation.png)
+![Asset allocation tab](assets/asset_allocation.png)
 
 ### Using the code
 

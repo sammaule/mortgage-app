@@ -2,6 +2,7 @@
 import json
 from typing import Optional, Tuple
 
+from dash import callback
 import dash_bootstrap_components as dbc
 import numpy as np
 import numpy_financial as npf
@@ -10,7 +11,6 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from app import app
 
 first_card = dbc.Card(
     [
@@ -123,7 +123,7 @@ layout = html.Div(
 )
 
 
-@app.callback(
+@callback(
     [
         Output("deposit-size", "value"),
         Output("purchase-price", "value"),
@@ -150,7 +150,7 @@ def fill_data_values(url, data) -> Tuple[float, float]:
         return deposit, value
 
 
-@app.callback(
+@callback(
     [
         Output("ltv", "children"),
         Output("mortgage-size", "children"),
@@ -185,7 +185,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
         raise PreventUpdate
 
 
-@app.callback(
+@callback(
     [
         Output("mortgage-plot", "figure"),
         Output("total-repaid", "children"),
@@ -281,7 +281,7 @@ def plot_monthly_repayments(
         raise PreventUpdate
 
 
-@app.callback(
+@callback(
     [Output("data-store-mortgage", "data"), Output("mortgage-saved-popup", "is_open")],
     [
         Input("save-button-mortgage", "n_clicks"),

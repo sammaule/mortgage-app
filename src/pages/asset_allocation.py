@@ -4,6 +4,7 @@ import json
 import math
 from typing import Dict, List, Optional, Tuple, Union
 
+from dash import callback
 import dash_bootstrap_components as dbc
 import numpy as np
 import numpy_financial as npf
@@ -13,7 +14,6 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from app import app
 from pages.budget import stamp_duty_payable
 
 asset_card = dbc.Card(
@@ -217,7 +217,7 @@ layout = html.Div(
 )
 
 
-@app.callback(
+@callback(
     [
         Output("cash-allocation", "max"),
         Output("securities-allocation", "max"),
@@ -289,7 +289,7 @@ def update_sliders(
         raise PreventUpdate
 
 
-@app.callback(
+@callback(
     [
         Output("allocation-plot", "figure"),
         Output("current-allocation-scenario", "data"),
@@ -512,7 +512,7 @@ def update_plot(
     return fig, allocation_scenario
 
 
-@app.callback(
+@callback(
     Output("total-wealth-allocation", "value"),
     [Input("url", "pathname")],
     [State("data-store", "data")],
@@ -536,7 +536,7 @@ def fill_wealth_value(url: str, data: str) -> int:
         return 0
 
 
-@app.callback(
+@callback(
     Output("mortgage-dropdown", "options"),
     [Input("url", "pathname")],
     [State("data-store-mortgage", "data")],
@@ -569,7 +569,7 @@ def fill_dropdown_options(url: str, data: str) -> List[Dict[str, Union[str, int]
         raise PreventUpdate
 
 
-@app.callback(
+@callback(
     [
         Output("property-allocation", "children"),
         Output("stamp-duty-cost", "value"),
@@ -620,7 +620,7 @@ def update_property_allocation(dropdown_val: int, mortgage_data: str, data: str)
         raise PreventUpdate
 
 
-@app.callback(
+@callback(
     Output("data-store-allocation-scenarios", "data"),
     [
         Input("save-scenario", "n_clicks"),
