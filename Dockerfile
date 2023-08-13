@@ -10,4 +10,4 @@ RUN pip3 install -r requirements.txt
 WORKDIR /src
 COPY ./src .
 
-CMD gunicorn --bind 0.0.0.0:8000 app:server
+CMD gunicorn --bind :8080 --workers 1 --threads 8 --timeout 0 app:server
