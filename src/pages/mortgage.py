@@ -17,9 +17,9 @@ first_card = dbc.Card(
         dbc.CardHeader("Mortgage details:"),
         dbc.CardBody(
             [
-                dbc.Label("Deposit size (£ ,000)"),
+                dbc.Label("Deposit size (£k)"),
                 dbc.Input(id="deposit-size", type="number"),
-                dbc.Label("Purchase price (£ ,000)"),
+                dbc.Label("Purchase price (£k)"),
                 dbc.Input(id="purchase-price", type="number"),
                 dbc.Label("Offer term (years): "),
                 dcc.Slider(
