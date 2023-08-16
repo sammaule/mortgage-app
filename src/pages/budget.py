@@ -62,7 +62,7 @@ income_and_tax_card = dbc.Card(
                     ],
                     value="higher_rate",
                 ),
-                dbc.Label("Loan to income ratio"),
+                dbc.Label("Loan : income"),
                 dcc.Slider(
                     id="lti",
                     value=4,
