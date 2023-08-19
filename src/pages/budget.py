@@ -16,12 +16,15 @@ from dash.exceptions import PreventUpdate
 
 from config import stamp_duty_rates
 
-savings_card = dbc.Card(
+inputs_card = dbc.Card(
     [
         dbc.CardHeader("Savings"),
         dbc.CardBody(
             [
-                dbc.Label("Total savings (£ ,000)"),
+                html.P(
+                    "Enter details of your current financial situtation to discover the maximum affordable house price for you at your target purchase date."
+                ),
+                dbc.Label("Total savings (£k)"),
                 dbc.Input(id="current-savings", value=50, type="number"),
                 dbc.Label("Monthly savings rate (£)"),
                 dbc.Input(
@@ -37,16 +40,6 @@ savings_card = dbc.Card(
                     step=0.01,
                     type="number",
                 ),
-            ]
-        ),
-    ]
-)
-
-income_and_tax_card = dbc.Card(
-    [
-        dbc.CardHeader("Other info"),
-        dbc.CardBody(
-            [
                 dbc.Label("Income (£ ,000)"),
                 dbc.Input(id="income", value=25, type="number"),
                 dbc.Label("Stamp Duty rate"),
@@ -60,9 +53,9 @@ income_and_tax_card = dbc.Card(
                             "value": "first_time_rate",
                         },
                     ],
-                    value="higher_rate",
+                    value="normal_rate",
                 ),
-                dbc.Label("Loan : income ratio"),
+                dbc.Label("Mortgage loan to income ratio"),
                 dcc.Slider(
                     id="lti",
                     value=4,
@@ -82,7 +75,7 @@ income_and_tax_card = dbc.Card(
                 ),
             ]
         ),
-    ]
+    ],
 )
 
 budget_results_card = dbc.Card(
@@ -92,7 +85,7 @@ budget_results_card = dbc.Card(
             [
                 html.Div(
                     [
-                        dbc.Label("Maximum affordable value:"),
+                        dbc.Label("Maximum affordable house price:"),
                         html.H5(id="property-value-on-target-date"),
                     ]
                 ),
@@ -111,22 +104,16 @@ budget_results_card = dbc.Card(
 
 layout = html.Div(
     [
-        dbc.Row([dbc.Col([savings_card], width=6), dbc.Col([income_and_tax_card], width=6)]),
+        dbc.Row([dbc.Col([inputs_card], width=6), dbc.Col([budget_results_card], width=6)]),
         dbc.Row(
             [
-                dbc.Col([budget_results_card], width=5),
-                dbc.Col(
+                dbc.Card(
                     [
-                        dbc.Card(
-                            [
-                                dbc.CardHeader("Affordability to target date"),
-                                dbc.CardBody(dcc.Graph(id="budget-plot")),
-                            ]
-                        )
-                    ],
-                    width=7,
-                ),
-            ]
+                        dbc.CardHeader("Affordability to target date"),
+                        dbc.CardBody(dcc.Graph(id="budget-plot")),
+                    ]
+                )
+            ],
         ),
     ]
 )

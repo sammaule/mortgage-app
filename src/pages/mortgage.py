@@ -1,8 +1,9 @@
 """Contains layout and callbacks for the mortgage page of the app."""
+import logging
 import json
 from typing import Optional, Tuple
 
-from dash import callback
+from dash import callback, dash_table
 import dash_bootstrap_components as dbc
 import numpy as np
 import numpy_financial as npf
@@ -11,8 +12,10 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
+# TODO: Get logs working
+logger = logging.getLogger(__name__)
 
-first_card = dbc.Card(
+mortgage_input_card = dbc.Card(
     [
         dbc.CardHeader("Mortgage details:"),
         dbc.CardBody(
@@ -24,25 +27,34 @@ first_card = dbc.Card(
                 dbc.Label("Offer term (years): "),
                 dcc.Slider(
                     id="offer-term",
-                    value=3,
-                    marks={i: f"{i}" for i in range(0, 6)},
+                    value=5,
+                    marks={i: f"{i}" for i in range(0, 11)},
                     step=1,
                     min=0,
-                    max=5,
+                    max=10,
                 ),
                 dbc.Label("Mortgage term (years): "),
                 dcc.Slider(
                     id="mortgage-term",
-                    value=20,
+                    value=25,
                     marks={i: f"{i}" for i in range(5, 41, 5)},
                     step=1,
                     min=5,
                     max=40,
                 ),
+                dbc.Label("Estimated years in property:"),
+                dcc.Slider(
+                    id="years-in-property",
+                    value=10,
+                    marks={i: f"{i}" for i in range(5, 41, 5)},
+                    step=1,
+                    min=1,
+                    max=40,
+                ),
                 dbc.Label("Initial interest rate (%): "),
                 dbc.Input(
                     id="initial-interest-rate",
-                    value=1.05,
+                    value=5.75,
                     type="number",
                     min=0,
                     max=100,
@@ -51,7 +63,7 @@ first_card = dbc.Card(
                 dbc.Label("Interest rate (%): "),
                 dbc.Input(
                     id="interest-rate",
-                    value=3.00,
+                    value=5.75,
                     type="number",
                     min=0,
                     max=100,
@@ -62,7 +74,7 @@ first_card = dbc.Card(
     ],
 )
 
-second_card = dbc.Card(
+mortgage_info_card = dbc.Card(
     [
         dbc.CardHeader("Mortgage info:"),
         dbc.CardBody(
@@ -101,11 +113,12 @@ second_card = dbc.Card(
     ]
 )
 
+cost_table_div = html.Div(id="cost-table-div")
 
 layout = html.Div(
     [
         dcc.Store(id="mortgage-payments-store", storage_type="session"),
-        dbc.Row([dbc.Col(first_card, width=6), dbc.Col(second_card, width=6)]),
+        dbc.Row([dbc.Col(mortgage_input_card, width=6), dbc.Col(mortgage_info_card, width=6)]),
         dbc.Row(
             [
                 dbc.Col(
@@ -119,6 +132,7 @@ layout = html.Div(
                 ),
             ]
         ),
+        dbc.Row(cost_table_div),
     ],
 )
 
@@ -145,8 +159,8 @@ def fill_data_values(url, data) -> Tuple[float, float]:
     """
     if data:
         data = json.loads(data)
-        deposit = round(data.get("deposit") / 1000, 3)
-        value = round(data.get("value") / 1000, 3)
+        deposit = round(data.get("deposit") / 1000, 1)
+        value = round(data.get("value") / 1000, 1)
         return deposit, value
 
 
@@ -186,13 +200,7 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
 
 
 @callback(
-    [
-        Output("mortgage-plot", "figure"),
-        Output("total-repaid", "children"),
-        Output("monthly-payment-offer", "children"),
-        Output("monthly-payment", "children"),
-        Output("mortgage-payments-store", "data"),
-    ],
+    Output("mortgage-payments-store", "data"),
     [
         Input("deposit-size", "value"),
         Input("purchase-price", "value"),
@@ -202,16 +210,16 @@ def calc_mortgage_data(deposit: int, price: int, data: str) -> Tuple[str, str, s
         Input("initial-interest-rate", "value"),
     ],
 )
-def plot_monthly_repayments(
+def store_mortgage_payments(
     deposit: int,
     purchase_price: int,
     term: int,
     interest_rate: float,
     offer_term: int,
     offer_rate: float,
-) -> Tuple[go.Figure, str, str, str, str]:
+) -> str:
     """
-    Callback to plot the payment schedule and populate the total interest repaid.
+    Callback to store mortgage payments data in session memory.
 
     Args:
         deposit: deposit amount (£k)
@@ -222,63 +230,169 @@ def plot_monthly_repayments(
         offer_rate: interest rate during offer period (% annual)
 
     Returns:
-
+        JSON str of mortgage payments data
     """
     if all(v is not None for v in [deposit, purchase_price, interest_rate, offer_term, offer_rate]):
-        # Convert inputs to correct units
-        total_borrowed = (purchase_price - deposit) * 1000
+        purchase_price = purchase_price * 1000
+        deposit = deposit * 1000
+        total_borrowed = purchase_price - deposit
         offer_rate = (offer_rate / 12) / 100  # monthly interest rate
         interest_rate = (interest_rate / 12) / 100
-        term *= 12  # months
+        # Convert terms from years to months
+        term *= 12
         offer_term *= 12
         remaining_term = term - offer_term
-        x = np.arange(term) + 1
+        month = np.arange(term) + 1
 
+        # Compute the mortgage payments, interest payments and principal payments during the offer period
+        # These functions return negative values so multiply by -1
         offer_payments = -1 * npf.pmt(offer_rate, term, total_borrowed)
-        offer_interest_payments = (-1 * npf.ipmt(offer_rate, x, term, total_borrowed))[:offer_term]
-        offer_principal_payments = (-1 * npf.ppmt(offer_rate, x, term, total_borrowed))[:offer_term]
+        offer_interest_payments = (-1 * npf.ipmt(offer_rate, month, term, total_borrowed))[:offer_term]
+        offer_principal_payments = (-1 * npf.ppmt(offer_rate, month, term, total_borrowed))[:offer_term]
 
+        # Same for the remaining term
         balance_after_offer = total_borrowed - np.sum(offer_principal_payments)
-
         per = np.arange(remaining_term) + 1
         remaining_payments = -1 * npf.pmt(interest_rate, remaining_term, balance_after_offer)
         remaining_interest_payments = -1 * npf.ipmt(interest_rate, per, remaining_term, balance_after_offer)
         remaining_principal_payments = -1 * npf.ppmt(interest_rate, per, remaining_term, balance_after_offer)
 
+        # Combine the offer and remaining term payments
         interest_payments = np.append(offer_interest_payments, remaining_interest_payments)
         principal_payments = np.append(offer_principal_payments, remaining_principal_payments)
 
         assert np.isclose(np.sum(principal_payments), total_borrowed)
 
-        # Create figure dict
-        figure = go.Figure(
-            data=[
-                go.Bar(
-                    x=x,
-                    y=interest_payments,
-                    name="Interest payments",
-                ),
-                go.Bar(
-                    x=x,
-                    y=principal_payments,
-                    name="Principal payments",
-                ),
-            ],
+        mortgage_payments_data = json.dumps(
+            {
+                "purchase_price": purchase_price,
+                "deposit": deposit,
+                "total_borrowed": total_borrowed,
+                "month": month.tolist(),
+                "offer_payments": offer_payments.tolist(),
+                "regular_payments": remaining_payments.tolist(),
+                "interest_payments": interest_payments.tolist(),
+                "principal_payments": principal_payments.tolist(),
+            }
         )
-        figure.update_layout(barmode="stack")
-        figure.update_xaxes(title_text="Months")
-        figure.update_yaxes(title_text="Total payment (£)")
-
-        # Create strings for output
-        interest_paid = int(np.sum(interest_payments))
-        interest_paid = f"£{interest_paid:,}"
-        offer_pmt = f"£{offer_payments :,.2f}"
-        regular_pmt = f"£{remaining_payments :,.2f}"
-
-        mortgage_payments_data = json.dumps({"offer_payments": offer_payments, "regular_payments": remaining_payments})
-        return figure, interest_paid, offer_pmt, regular_pmt, mortgage_payments_data
+        return mortgage_payments_data
     else:
         raise PreventUpdate
+
+
+@callback(
+    [
+        Output("monthly-payment-offer", "children"),
+        Output("monthly-payment", "children"),
+        Output("total-repaid", "children"),
+    ],
+    Input("mortgage-payments-store", "data"),
+)
+def calc_repayment_strs(mortgage_payments_data: str) -> Tuple[str, str, str]:
+    """Fills the total interest payable, monthly payment and monthly payment during offer period
+
+    Args:
+        mortgage_payments_data (str): stored mortgage payments data
+
+    Raises:
+        PreventUpdate: _description_
+
+    Returns:
+        Tuple[str, str, str]: _description_
+    """
+    mortgage_data = json.loads(mortgage_payments_data)
+    offer_payment = mortgage_data.get("offer_payments", 0)
+    regular_payment = mortgage_data.get("regular_payments", 0)
+    total_payment = sum(mortgage_data.get("interest_payments"))
+    return f"£{int(offer_payment) :,}", f"£{int(regular_payment) :,}", f"£{int(total_payment) :,}"
+
+
+@callback(
+    Output("mortgage-plot", "figure"),
+    Input("mortgage-payments-store", "data"),
+)
+def plot_monthly_repayments(
+    mortgage_payments_data: str,
+) -> go.Figure:
+    """
+    Callback to plot the monthly mortgage payments.
+
+    Args:
+        mortgage_payments_data: JSON str of mortgage payments data
+
+    Returns:
+        Plotly figure
+    """
+    # read json data
+    mortgage_payments_data = json.loads(mortgage_payments_data)
+
+    # Create figure dict
+    figure = go.Figure(
+        data=[
+            go.Bar(
+                x=mortgage_payments_data.get("month"),
+                y=mortgage_payments_data.get("interest_payments"),
+                name="Interest payments",
+            ),
+            go.Bar(
+                x=mortgage_payments_data.get("month"),
+                y=mortgage_payments_data.get("principal_payments"),
+                name="Principal payments",
+            ),
+        ],
+    )
+    figure.update_layout(barmode="stack")
+    figure.update_xaxes(title_text="Months")
+    figure.update_yaxes(title_text="Total payment (£)")
+
+    return figure
+
+
+@callback(Output("cost-table-div", "children"), [Input("mortgage-payments-store", "data"), Input("years-in-property", "value")])
+def create_cost_table(mortgage_payments_data: str, years_in_property: int) -> dash_table.DataTable:
+    """
+    Callback to create the mortgage cost table.
+
+    Args:
+        mortgage_payments_data: JSON str of mortgage payments data
+
+    Returns:
+        List of dicts to populate the table
+    """
+    logger.debug("Creating mortgage cost table")
+    mortgage_payments_data = json.loads(mortgage_payments_data)
+    month = mortgage_payments_data.get("month")
+    interest_payments = mortgage_payments_data.get("interest_payments")
+    principal_payments = mortgage_payments_data.get("principal_payments")
+    total_payments = np.array(interest_payments) + np.array(principal_payments)
+
+    # TODO: Add amortised stamp duty payments, maintenance costs, etc.
+    yearly_mainenance_costs = mortgage_payments_data.get("purchase_price") * 0.01
+    maintenance_costs = np.empty(years_in_property * 12)
+    maintenance_costs.fill(yearly_mainenance_costs / 12)
+    if len(month) - len(maintenance_costs) > 0:
+        maintenance_costs = np.append(maintenance_costs, np.zeros(len(month) - len(maintenance_costs)))
+
+    return dash_table.DataTable(
+        data=[
+            {
+                "Month": round(month[i], 2),
+                "Interest payments": round(interest_payments[i], 2),
+                "Principal payments": round(principal_payments[i], 2),
+                "Total payments": round(total_payments[i], 2),
+                "Maintenance costs": round(maintenance_costs[i], 2),
+            }
+            for i in range(len(month))
+        ],
+        columns=[
+            {"name": "Month", "id": "Month"},
+            {"name": "Interest payments", "id": "Interest payments"},
+            {"name": "Principal payments", "id": "Principal payments"},
+            {"name": "Total payments", "id": "Total payments"},
+            {"name": "Maintenance costs", "id": "Maintenance costs"},
+        ],
+        export_format="csv",
+    )
 
 
 @callback(
