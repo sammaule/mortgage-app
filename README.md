@@ -6,7 +6,7 @@ Pland is a project developed to help you budget appropriately when planning to p
 - Choose a mortgage that is right for you
 - Compare the impact of buying a house vs. investing elsewhere on your wealth
 
-You can view the app at http://home-pland.herokuapp.com/. Open the app and follow the tutorial below on how to use it.
+You can view the app [here](https://pland-bzipk2phsa-ew.a.run.app/). Open the app and follow the tutorial below on how to use it.
 
 ### Tutorial
 
